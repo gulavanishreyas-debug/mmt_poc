@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { trips, connections } from '../storage';
+import { trips, broadcastToTrip } from '../storage';
 
 // GET handler - Fetch trip details (used by join page)
 export async function GET(request: NextRequest) {
@@ -153,6 +153,9 @@ export async function POST(request: NextRequest) {
     // Calculate if discount is unlocked
     const isDiscountUnlocked = trip.members.length >= trip.requiredMembers;
 
+    console.log(`✅ [API/join/POST] Member added successfully. Current: ${trip.members.length}/${trip.requiredMembers}`);
+    console.log(`📡 [API/join/POST] Broadcasting MEMBER_JOINED for ${newMember.name}`);
+
     // Broadcast real-time update to all connected clients for this trip
     broadcastToTrip(invitation_token, {
       type: 'MEMBER_JOINED',
@@ -198,16 +201,6 @@ export async function POST(request: NextRequest) {
       { error: 'Internal server error' },
       { status: 500 }
     );
-  }
-}
-
-// Helper function to broadcast updates to all connected clients
-function broadcastToTrip(tripId: string, message: any) {
-  const tripConnections = connections.get(tripId);
-  if (tripConnections) {
-    tripConnections.forEach(callback => {
-      callback(message);
-    });
   }
 }
 
