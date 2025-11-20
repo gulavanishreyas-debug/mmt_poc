@@ -52,9 +52,9 @@ export async function POST(request: NextRequest) {
 
     console.log('🔵 [API/create] Trip object created:', trip);
 
-    // Store trip in memory
-    trips.set(tripId, trip);
-    console.log('🔵 [API/create] Trip stored in memory. Total trips:', trips.size);
+    // Store trip in database
+    await trips.set(tripId, trip);
+    console.log('🔵 [API/create] Trip stored successfully');
 
     // Return success response
     const response = {

@@ -1,5 +1,7 @@
-// Shared in-memory storage for POC
-// In production, replace with actual database
+// Shared storage for trips
+// Uses Vercel KV (Redis) in production, in-memory Map in development
+// Import KV adapter for database operations
+import { getTrip, setTrip, deleteTrip, hasTrip, getAllTripIds, storageMode } from './kv-adapter';
 
 export interface Member {
   id: string;
@@ -55,26 +57,25 @@ export interface Trip {
   selectedHotel?: any; // The winning hotel after voting
 }
 
-// Use global to persist across HMR (Hot Module Replacement)
-// This prevents data loss during development when Next.js recompiles
+// Store for Server-Sent Events connections (always in-memory per instance)
 declare global {
-  var tripsStore: Map<string, Trip> | undefined;
   var connectionsStore: Map<string, Set<(data: any) => void>> | undefined;
 }
 
-// In-memory storage (persists across HMR in dev mode)
-export const trips = global.tripsStore || new Map<string, Trip>();
-if (!global.tripsStore) {
-  global.tripsStore = trips;
-  console.log('🔵 [Storage] Initialized new trips store');
-} else {
-  console.log('🔵 [Storage] Reusing existing trips store. Current trips:', trips.size);
-}
-
-// Store for Server-Sent Events connections
 export const connections = global.connectionsStore || new Map<string, Set<(data: any) => void>>();
 if (!global.connectionsStore) {
   global.connectionsStore = connections;
+}
+
+console.log(`🔵 [Storage] Initialized storage in ${storageMode} mode`);
+
+// Export unified trips interface compatible with existing code
+export const trips = {
+  get: getTrip,
+  set: setTrip,
+  delete: deleteTrip,
+  has: hasTrip,
+  keys: getAllTripIds,
 }
 
 // Helper function to broadcast messages to all clients connected to a trip

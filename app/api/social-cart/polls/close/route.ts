@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const trip = trips.get(tripId);
+    const trip = await trips.get(tripId);
     if (!trip) {
       return NextResponse.json(
         { error: 'Trip not found' },
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     }
 
     poll.status = 'closed';
-    trips.set(tripId, trip);
+    await trips.set(tripId, trip);
 
     console.log('✅ [API/polls/close/POST] Poll closed successfully');
 

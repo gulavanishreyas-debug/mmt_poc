@@ -21,9 +21,8 @@ export async function POST(request: NextRequest) {
 
     // Find the trip
     console.log('🟢 [API/join] Looking for trip:', invitation_token);
-    console.log('🟢 [API/join] Available trips:', Array.from(trips.keys()));
     
-    const trip = trips.get(invitation_token);
+    const trip = await trips.get(invitation_token);
     if (!trip) {
       console.error('❌ [API/join] Trip not found:', invitation_token);
       return NextResponse.json(
@@ -88,7 +87,7 @@ export async function POST(request: NextRequest) {
 
     // Add member to trip (atomic operation)
     trip.members.push(newMember);
-    trips.set(invitation_token, trip);
+    await trips.set(invitation_token, trip);
 
     // Calculate if discount is unlocked
     const isDiscountUnlocked = trip.members.length >= trip.requiredMembers;
@@ -149,8 +148,6 @@ export async function GET(request: NextRequest) {
   const tripId = searchParams.get('tripId');
   
   console.log(' [API/join/GET] Looking for tripId:', tripId);
-  console.log(' [API/join/GET] Available trips in memory:', Array.from(trips.keys()));
-  console.log(' [API/join/GET] Total trips in memory:', trips.size);
 
   if (!tripId) {
     console.error(' [API/join/GET] No tripId provided');
@@ -160,7 +157,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const trip = trips.get(tripId);
+  const trip = await trips.get(tripId);
   if (!trip) {
     console.error(' [API/join/GET] Trip not found:', tripId);
     return NextResponse.json(
