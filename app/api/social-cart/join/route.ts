@@ -30,6 +30,12 @@ export async function GET(request: NextRequest) {
     }
     
     console.log('✅ [API/join/GET] Trip found:', trip.tripName);
+    console.log('✅ [API/join/GET] Returning trip data:', {
+      tripId: trip.tripId,
+      memberCount: trip.members.length,
+      members: trip.members.map(m => ({ id: m.id, name: m.name, isAdmin: m.isAdmin })),
+      requiredMembers: trip.requiredMembers,
+    });
 
     return NextResponse.json({
       success: true,

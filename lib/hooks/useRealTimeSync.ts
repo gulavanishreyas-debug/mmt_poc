@@ -12,53 +12,88 @@ export function useRealTimeSync(tripId: string | null) {
     // Polling fallback for Vercel (every 3 seconds)
     const pollTripUpdates = async () => {
       try {
+        console.log(`🔄 [Polling] Fetching trip updates for: ${tripId}`);
         const response = await fetch(`/api/social-cart/join?tripId=${tripId}`);
+        console.log(`🔄 [Polling] Response status: ${response.status}`);
+        
         if (response.ok) {
           const data = await response.json();
+          console.log(`🔄 [Polling] Response data:`, data);
+          
           if (data.success && data.trip) {
             const currentMembers = useTripStore.getState().members;
             const serverMembers = data.trip.members || [];
+            const currentStep = useTripStore.getState().currentStep;
+            const isDiscountUnlocked = useTripStore.getState().isDiscountUnlocked;
+            
+            console.log(`🔄 [Polling] Current state:`, {
+              localMemberCount: currentMembers.length,
+              localMembers: currentMembers.map(m => ({ id: m.id, name: m.name })),
+              serverMemberCount: serverMembers.length,
+              serverMembers: serverMembers.map((m: any) => ({ id: m.id, name: m.name })),
+              requiredMembers: data.trip.requiredMembers,
+              currentStep,
+              isDiscountUnlocked,
+            });
             
             // Check if there are new members
             if (serverMembers.length > currentMembers.length) {
-              console.log(`🔄 [Polling] Detected ${serverMembers.length - currentMembers.length} new members`);
+              console.log(`🎉 [Polling] NEW MEMBERS DETECTED! Server has ${serverMembers.length}, local has ${currentMembers.length}`);
               
               // Add missing members
+              let addedCount = 0;
               serverMembers.forEach((serverMember: any) => {
                 const exists = currentMembers.find(m => m.id === serverMember.id);
                 if (!exists) {
-                  console.log(`👥 [Polling] Adding member: ${serverMember.name}`);
+                  console.log(`👥 [Polling] Adding new member: ${serverMember.name} (${serverMember.id})`);
                   addMember({
                     name: serverMember.name,
                     avatar: serverMember.avatar,
                     isAdmin: serverMember.isAdmin,
                     mobile: serverMember.mobile,
                   });
+                  addedCount++;
                 }
               });
+              console.log(`✅ [Polling] Added ${addedCount} new members`);
               
               // Check if discount should be unlocked
               const updatedMembers = useTripStore.getState().members;
               const requiredMembers = data.trip.requiredMembers;
+              console.log(`🔍 [Polling] Checking discount: ${updatedMembers.length} >= ${requiredMembers}? Currently unlocked: ${useTripStore.getState().isDiscountUnlocked}`);
+              
               if (updatedMembers.length >= requiredMembers && !useTripStore.getState().isDiscountUnlocked) {
-                console.log('🎉 [Polling] All members joined! Unlocking discount...');
+                console.log('🎉 [Polling] ALL MEMBERS JOINED! Unlocking discount...');
                 useTripStore.setState({ isDiscountUnlocked: true });
                 
                 // Auto-advance to poll screen if on hub
-                if (useTripStore.getState().currentStep === 'hub') {
-                  console.log('🎉 [Polling] Advancing to poll screen');
+                const currentStepNow = useTripStore.getState().currentStep;
+                console.log(`🔍 [Polling] Current step: ${currentStepNow}`);
+                if (currentStepNow === 'hub') {
+                  console.log('🚀 [Polling] Advancing from hub to poll screen');
                   useTripStore.getState().setStep('poll');
+                } else {
+                  console.log(`⚠️ [Polling] Not on hub (on ${currentStepNow}), not advancing`);
                 }
                 
                 // Trigger confetti
                 if (typeof window !== 'undefined') {
+                  console.log('🎊 [Polling] Triggering confetti!');
                   import('../confetti').then(({ triggerConfetti }) => {
                     triggerConfetti();
                   });
                 }
+              } else {
+                console.log(`⏳ [Polling] Not all members yet or already unlocked. Members: ${updatedMembers.length}/${requiredMembers}, Unlocked: ${useTripStore.getState().isDiscountUnlocked}`);
               }
+            } else {
+              console.log(`✓ [Polling] No new members. Server: ${serverMembers.length}, Local: ${currentMembers.length}`);
             }
+          } else {
+            console.error('❌ [Polling] Invalid response format:', data);
           }
+        } else {
+          console.error(`❌ [Polling] Failed to fetch: ${response.status} ${response.statusText}`);
         }
       } catch (error) {
         console.error('❌ [Polling] Error fetching trip updates:', error);
@@ -94,16 +129,19 @@ export function useRealTimeSync(tripId: string | null) {
           case 'MEMBER_JOINED':
             const { member, memberCount, isDiscountUnlocked } = message.data;
             
-            console.log('👥 [useRealTimeSync] MEMBER_JOINED event:', {
+            console.log('👥 [SSE] MEMBER_JOINED event received:', {
               member: member.name,
+              memberId: member.id,
               memberCount,
               isDiscountUnlocked,
-              currentMembers: members.length,
+              currentLocalMembers: members.length,
+              currentLocalMemberIds: members.map(m => m.id),
             });
             
             // Check if member already exists
             const existingMember = members.find(m => m.id === member.id);
             if (!existingMember) {
+              console.log(`👥 [SSE] Adding new member via SSE: ${member.name} (${member.id})`);
               // Add new member to store
               addMember({
                 name: member.name,
@@ -113,20 +151,23 @@ export function useRealTimeSync(tripId: string | null) {
               });
 
               // Show notification
-              console.log(`🎉 [useRealTimeSync] ${member.name} joined the trip!`);
+              console.log(`🎉 [SSE] ${member.name} joined the trip!`);
               
               // Update discount status
               if (isDiscountUnlocked) {
-                console.log('🎉 [useRealTimeSync] Discount unlocked! Updating store...');
+                console.log('🎉 [SSE] Discount unlocked via SSE! Updating store...');
                 useTripStore.setState({ isDiscountUnlocked: true });
               }
               
               // Trigger confetti if discount unlocked
               if (isDiscountUnlocked && typeof window !== 'undefined') {
+                console.log('🎊 [SSE] Triggering confetti via SSE');
                 import('../confetti').then(({ triggerConfetti }) => {
                   triggerConfetti();
                 });
               }
+            } else {
+              console.log(`⏭️ [SSE] Member ${member.name} already exists locally, skipping`);
             }
             break;
 
