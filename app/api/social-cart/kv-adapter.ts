@@ -27,20 +27,39 @@ const localTrips = new Map<string, Trip>();
  * Get trip from KV or local storage
  */
 export async function getTrip(tripId: string): Promise<Trip | null> {
+  console.log(`🔍 [KV-Adapter] GET request for trip:${tripId}`);
+  console.log(`🔍 [KV-Adapter] Storage mode: ${kv ? 'KV' : 'LOCAL'}`);
+  
   try {
     if (kv) {
+      console.log(`📡 [KV-Adapter] Querying Vercel KV for trip:${tripId}`);
       const trip = await kv.get(`trip:${tripId}`) as Trip | null;
-      console.log(`📦 [KV-Adapter] GET trip:${tripId}`, trip ? 'found' : 'not found');
+      console.log(`📦 [KV-Adapter] KV result:`, trip ? `found (${trip.tripName})` : 'not found');
+      
+      // If not found in KV, check local cache as fallback
+      if (!trip) {
+        console.log(`⚠️ [KV-Adapter] Trip not in KV, checking local cache...`);
+        const localTrip = localTrips.get(tripId);
+        if (localTrip) {
+          console.log(`✅ [KV-Adapter] Found in local cache, syncing to KV...`);
+          await kv.set(`trip:${tripId}`, localTrip, { ex: 86400 });
+          return localTrip;
+        }
+      }
+      
       return trip;
     }
     
     // Fallback to local storage
     const trip = localTrips.get(tripId) || null;
-    console.log(`📦 [Local] GET trip:${tripId}`, trip ? 'found' : 'not found');
+    console.log(`📦 [Local] GET trip:${tripId}`, trip ? `found (${trip.tripName})` : 'not found');
     return trip;
   } catch (error) {
     console.error(`❌ [KV-Adapter] Error getting trip ${tripId}:`, error);
-    return localTrips.get(tripId) || null;
+    // Always try local cache on error
+    const fallbackTrip = localTrips.get(tripId) || null;
+    console.log(`🔄 [KV-Adapter] Fallback to local cache:`, fallbackTrip ? 'found' : 'not found');
+    return fallbackTrip;
   }
 }
 
@@ -48,21 +67,27 @@ export async function getTrip(tripId: string): Promise<Trip | null> {
  * Set trip in KV or local storage
  */
 export async function setTrip(tripId: string, trip: Trip): Promise<void> {
+  console.log(`💾 [KV-Adapter] SET request for trip:${tripId} (${trip.tripName})`);
+  console.log(`💾 [KV-Adapter] Storage mode: ${kv ? 'KV' : 'LOCAL'}`);
+  
   try {
+    // Always update local cache first
+    localTrips.set(tripId, trip);
+    console.log(`✅ [Local] Cached trip:${tripId}`);
+    
     if (kv) {
       // Store in KV with 24-hour expiry
+      console.log(`📡 [KV-Adapter] Saving to Vercel KV...`);
       await kv.set(`trip:${tripId}`, trip, { ex: 86400 });
-      console.log(`💾 [KV-Adapter] SET trip:${tripId}`);
+      console.log(`✅ [KV-Adapter] Saved to KV: trip:${tripId}`);
       return;
     }
     
-    // Fallback to local storage
-    localTrips.set(tripId, trip);
-    console.log(`💾 [Local] SET trip:${tripId}`);
+    console.log(`💾 [Local] Saved locally only (KV not available)`);
   } catch (error) {
     console.error(`❌ [KV-Adapter] Error setting trip ${tripId}:`, error);
-    // Always update local cache as fallback
-    localTrips.set(tripId, trip);
+    // Local cache already updated above, so we're safe
+    console.log(`✅ [Fallback] Trip saved to local cache`);
   }
 }
 

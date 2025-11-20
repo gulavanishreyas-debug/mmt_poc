@@ -21,10 +21,18 @@ export async function POST(request: NextRequest) {
 
     // Find the trip
     console.log('🟢 [API/join] Looking for trip:', invitation_token);
+    console.log('🟢 [API/join] Process env VERCEL:', process.env.VERCEL);
+    console.log('🟢 [API/join] Process env NODE_ENV:', process.env.NODE_ENV);
     
     const trip = await trips.get(invitation_token);
+    
     if (!trip) {
       console.error('❌ [API/join] Trip not found:', invitation_token);
+      console.error('❌ [API/join] This could mean:');
+      console.error('  1. KV database not set up in Vercel');
+      console.error('  2. Trip was created in different instance');
+      console.error('  3. Trip expired (24h TTL)');
+      
       return NextResponse.json(
         { error: 'Invalid invitation token' },
         { status: 404 }
