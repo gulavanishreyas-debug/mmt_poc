@@ -3,60 +3,70 @@
 
 import type { Trip } from './storage';
 
-// Environment detection
-const isVercel = process.env.VERCEL === '1';
-const isProduction = process.env.NODE_ENV === 'production';
-const useKV = isVercel || (isProduction && process.env.KV_REST_API_URL);
-
-// Lazy import KV to avoid errors in development
+// Try to import Vercel KV at the top level (better for production)
 let kv: any = null;
-if (useKV) {
-  try {
-    const kvModule = require('@vercel/kv');
-    kv = kvModule.kv;
-    console.log('✅ [KV-Adapter] Using Vercel KV for storage');
-  } catch (error) {
-    console.warn('⚠️ [KV-Adapter] @vercel/kv not found, falling back to in-memory storage');
-  }
+try {
+  // Use dynamic import for better compatibility
+  const kvModule = require('@vercel/kv');
+  kv = kvModule.kv;
+  console.log('✅ [KV-Adapter] Vercel KV module loaded successfully');
+} catch (error) {
+  console.warn('⚠️ [KV-Adapter] @vercel/kv not available, will use in-memory storage');
 }
 
-// Local in-memory storage for development
-const localTrips = new Map<string, Trip>();
+// Environment detection - check if we should use KV
+const isVercel = process.env.VERCEL === '1';
+const hasKVUrl = !!process.env.KV_REST_API_URL;
+const useKV = kv && (isVercel || hasKVUrl);
+
+console.log(`🔵 [KV-Adapter] Environment check:`, {
+  isVercel,
+  hasKVUrl,
+  kvModuleLoaded: !!kv,
+  willUseKV: useKV,
+});
+
+// Local in-memory storage for development (MUST be global to persist across requests)
+declare global {
+  var localTripsStore: Map<string, Trip> | undefined;
+}
+
+const localTrips = global.localTripsStore || new Map<string, Trip>();
+if (!global.localTripsStore) {
+  global.localTripsStore = localTrips;
+  console.log('🔵 [KV-Adapter] Initialized global local trips store');
+}
 
 /**
  * Get trip from KV or local storage
  */
 export async function getTrip(tripId: string): Promise<Trip | null> {
   console.log(`🔍 [KV-Adapter] GET request for trip:${tripId}`);
-  console.log(`🔍 [KV-Adapter] Storage mode: ${kv ? 'KV' : 'LOCAL'}`);
+  console.log(`🔍 [KV-Adapter] Storage mode: ${useKV ? 'KV' : 'LOCAL'}`);
+  console.log(`🔍 [KV-Adapter] KV module available: ${!!kv}`);
   
   try {
-    if (kv) {
+    if (useKV && kv) {
       console.log(`📡 [KV-Adapter] Querying Vercel KV for trip:${tripId}`);
       const trip = await kv.get(`trip:${tripId}`) as Trip | null;
       console.log(`📦 [KV-Adapter] KV result:`, trip ? `found (${trip.tripName})` : 'not found');
       
-      // If not found in KV, check local cache as fallback
-      if (!trip) {
-        console.log(`⚠️ [KV-Adapter] Trip not in KV, checking local cache...`);
-        const localTrip = localTrips.get(tripId);
-        if (localTrip) {
-          console.log(`✅ [KV-Adapter] Found in local cache, syncing to KV...`);
-          await kv.set(`trip:${tripId}`, localTrip, { ex: 86400 });
-          return localTrip;
-        }
-      }
-      
+      // Don't fallback to local cache in production - this would cause inconsistency
       return trip;
     }
     
-    // Fallback to local storage
+    // Fallback to local storage in development
     const trip = localTrips.get(tripId) || null;
     console.log(`📦 [Local] GET trip:${tripId}`, trip ? `found (${trip.tripName})` : 'not found');
+    console.log(`📦 [Local] Total trips in store: ${localTrips.size}`);
     return trip;
   } catch (error) {
     console.error(`❌ [KV-Adapter] Error getting trip ${tripId}:`, error);
-    // Always try local cache on error
+    // In production, don't fallback to local cache - throw the error
+    if (useKV) {
+      throw error;
+    }
+    // In development, try local cache
     const fallbackTrip = localTrips.get(tripId) || null;
     console.log(`🔄 [KV-Adapter] Fallback to local cache:`, fallbackTrip ? 'found' : 'not found');
     return fallbackTrip;
@@ -68,25 +78,30 @@ export async function getTrip(tripId: string): Promise<Trip | null> {
  */
 export async function setTrip(tripId: string, trip: Trip): Promise<void> {
   console.log(`💾 [KV-Adapter] SET request for trip:${tripId} (${trip.tripName})`);
-  console.log(`💾 [KV-Adapter] Storage mode: ${kv ? 'KV' : 'LOCAL'}`);
+  console.log(`💾 [KV-Adapter] Storage mode: ${useKV ? 'KV' : 'LOCAL'}`);
+  console.log(`💾 [KV-Adapter] KV module available: ${!!kv}`);
   
   try {
-    // Always update local cache first
-    localTrips.set(tripId, trip);
-    console.log(`✅ [Local] Cached trip:${tripId}`);
-    
-    if (kv) {
-      // Store in KV with 24-hour expiry
+    if (useKV && kv) {
+      // In production, store in KV with 24-hour expiry
       console.log(`📡 [KV-Adapter] Saving to Vercel KV...`);
       await kv.set(`trip:${tripId}`, trip, { ex: 86400 });
       console.log(`✅ [KV-Adapter] Saved to KV: trip:${tripId}`);
       return;
     }
     
-    console.log(`💾 [Local] Saved locally only (KV not available)`);
+    // In development, save to local storage
+    localTrips.set(tripId, trip);
+    console.log(`✅ [Local] Cached trip:${tripId}`);
+    console.log(`📦 [Local] Total trips in store: ${localTrips.size}`);
   } catch (error) {
     console.error(`❌ [KV-Adapter] Error setting trip ${tripId}:`, error);
-    // Local cache already updated above, so we're safe
+    // In production, throw the error so caller knows it failed
+    if (useKV) {
+      throw error;
+    }
+    // In development, fallback to local cache
+    localTrips.set(tripId, trip);
     console.log(`✅ [Fallback] Trip saved to local cache`);
   }
 }
@@ -96,9 +111,9 @@ export async function setTrip(tripId: string, trip: Trip): Promise<void> {
  */
 export async function deleteTrip(tripId: string): Promise<void> {
   try {
-    if (kv) {
+    if (useKV && kv) {
       await kv.del(`trip:${tripId}`);
-      console.log(`🗑️ [KV-Adapter] DELETE trip:${tripId}`);
+      console.log(`🗑️ [KV-Adapter] DELETE trip:${tripId} from KV`);
       return;
     }
     
@@ -106,6 +121,9 @@ export async function deleteTrip(tripId: string): Promise<void> {
     console.log(`🗑️ [Local] DELETE trip:${tripId}`);
   } catch (error) {
     console.error(`❌ [KV-Adapter] Error deleting trip ${tripId}:`, error);
+    if (useKV) {
+      throw error;
+    }
     localTrips.delete(tripId);
   }
 }
@@ -115,7 +133,7 @@ export async function deleteTrip(tripId: string): Promise<void> {
  */
 export async function hasTrip(tripId: string): Promise<boolean> {
   try {
-    if (kv) {
+    if (useKV && kv) {
       const exists = await kv.exists(`trip:${tripId}`);
       return exists === 1;
     }
@@ -123,6 +141,9 @@ export async function hasTrip(tripId: string): Promise<boolean> {
     return localTrips.has(tripId);
   } catch (error) {
     console.error(`❌ [KV-Adapter] Error checking trip ${tripId}:`, error);
+    if (useKV) {
+      return false;
+    }
     return localTrips.has(tripId);
   }
 }
@@ -132,7 +153,7 @@ export async function hasTrip(tripId: string): Promise<boolean> {
  */
 export async function getAllTripIds(): Promise<string[]> {
   try {
-    if (kv) {
+    if (useKV && kv) {
       // KV doesn't support listing all keys easily, would need scanning
       // For now, return empty array in production
       return [];
@@ -146,4 +167,4 @@ export async function getAllTripIds(): Promise<string[]> {
 }
 
 // Export storage mode for logging
-export const storageMode = kv ? 'KV' : 'LOCAL';
+export const storageMode = useKV ? 'KV' : 'LOCAL';

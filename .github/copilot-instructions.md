@@ -3,7 +3,9 @@
 ## Project Overview
 **Purpose:** Collaborative, gamified group travel booking with real-time chat, polling, and hotel voting.  
 **Tech Stack:** Next.js 13.5.6 (React 18), TypeScript, TailwindCSS, Zustand, Framer Motion, Canvas Confetti.  
-**Storage:** Vercel KV (Redis) in production, in-memory Map in development. Uses `app/api/social-cart/kv-adapter.ts` for environment-aware storage.
+**Storage:** Vercel KV (Redis) in production, in-memory Map in development. Uses `app/api/social-cart/kv-adapter.ts` for environment-aware storage.  
+  - **Critical:** Local storage MUST use `global.localTripsStore` to persist across API requests in dev mode
+**Deployment:** Vercel serverless with `vercel.json` config (SSE endpoint has 60s max duration).
 
 ## Critical Architecture: Dual State + KV Storage + SSE Real-Time Sync
 
@@ -58,6 +60,7 @@ export async function POST(request: NextRequest) {
 - All `trips.get()` and `trips.set()` calls MUST use `await` (they're async in production)
 - Always call `broadcastToTrip()` after mutations or changes won't sync to other users
 - Trip data expires after 24 hours in Vercel KV
+- **Local storage uses `global.localTripsStore`** to persist across API requests (without this, second user joins will fail with 404)
 
 ## Step-Based Navigation Architecture
 `app/page.tsx` acts as router, rendering components based on `useTripStore().currentStep`:
@@ -114,9 +117,10 @@ vercel logs          # View production logs
 ### Vercel Deployment Setup
 1. Install KV package: `npm install @vercel/kv`
 2. In Vercel dashboard: **Storage** → **Create Database** → **KV (Redis)**
-3. Name it `mmt-social-cart-kv` → Vercel auto-injects env vars
+3. Name it `mmt-social-cart-kv` → Vercel auto-injects env vars (`KV_REST_API_URL`, etc.)
 4. Deploy: `git push` or `vercel --prod`
 5. KV automatically activates in production (no code changes needed)
+6. **Important:** `vercel.json` sets SSE endpoint (`/api/social-cart/events`) to 60s max duration
 
 See `DEPLOYMENT_QUICKSTART.md` for detailed setup instructions.
 
@@ -131,9 +135,22 @@ See `DEPLOYMENT_QUICKSTART.md` for detailed setup instructions.
 **Common failures:**
 - **State not syncing?** API route forgot `broadcastToTrip()` call or missing `await`
 - **"Module not found: @vercel/kv"?** Run `npm install @vercel/kv`
-- **Works locally but not on Vercel?** Check KV database is connected in Vercel dashboard
+- **Works locally but not on Vercel?** Check KV database is connected in Vercel dashboard → Storage tab
+- **Second user gets 404 on Vercel?** KV database not set up - see deployment steps above
 - **Poll not appearing?** Check `status: 'active'` and `expiresAt` is future
 - **Confetti breaks SSR?** Must dynamic import: `import('../confetti').then(({ triggerConfetti }) => ...)`
+- **SSE timeout on Vercel?** Check `vercel.json` has `maxDuration: 60` for events endpoint
+- **Debugging storage issues?** Visit `/api/social-cart/debug` to check KV status
+
+### Testing Multi-User Collaboration
+To test real-time sync locally:
+1. Start dev server: `npm run dev`
+2. Open `http://localhost:3000` in regular browser (User 1)
+3. Open `http://localhost:3000` in incognito window (User 2)
+4. Open `http://localhost:3000` in different browser (User 3)
+5. Create trip as User 1, copy invite link
+6. Join as Users 2 & 3 - all should see each other in real-time
+7. Check browser consoles for `[useRealTimeSync]` and `[KV-Adapter]` logs
 
 ### Logging Convention
 Use emoji prefixes for scannable logs:
