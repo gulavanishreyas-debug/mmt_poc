@@ -1,6 +1,59 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { trips, connections } from '../storage';
 
+// GET handler - Fetch trip details (used by join page)
+export async function GET(request: NextRequest) {
+  console.log('🔍 [API/join/GET] Request received');
+  
+  try {
+    const { searchParams } = new URL(request.url);
+    const tripId = searchParams.get('tripId');
+
+    if (!tripId) {
+      console.error('❌ [API/join/GET] Missing tripId parameter');
+      return NextResponse.json(
+        { error: 'Trip ID is required' },
+        { status: 400 }
+      );
+    }
+
+    console.log('🔍 [API/join/GET] Looking for trip:', tripId);
+    
+    const trip = await trips.get(tripId);
+    
+    if (!trip) {
+      console.error('❌ [API/join/GET] Trip not found:', tripId);
+      return NextResponse.json(
+        { error: 'Trip not found' },
+        { status: 404 }
+      );
+    }
+    
+    console.log('✅ [API/join/GET] Trip found:', trip.tripName);
+
+    return NextResponse.json({
+      success: true,
+      trip: {
+        tripId: trip.tripId,
+        tripName: trip.tripName,
+        destination: trip.destination,
+        purpose: trip.purpose,
+        requiredMembers: trip.requiredMembers,
+        currentMembers: trip.members.length,
+        isLinkActive: trip.isLinkActive,
+        linkExpiresAt: trip.linkExpiresAt,
+      },
+    });
+  } catch (error: any) {
+    console.error('❌ [API/join/GET] Error:', error);
+    return NextResponse.json(
+      { error: error.message || 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+// POST handler - Join trip (add member)
 export async function POST(request: NextRequest) {
   console.log('🟢 [API/join] POST request received');
   
@@ -146,39 +199,6 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
-
-// GET endpoint to retrieve trip details
-export async function GET(request: NextRequest) {
-  console.log(' [API/join/GET] Request received');
-  
-  const { searchParams } = new URL(request.url);
-  const tripId = searchParams.get('tripId');
-  
-  console.log(' [API/join/GET] Looking for tripId:', tripId);
-
-  if (!tripId) {
-    console.error(' [API/join/GET] No tripId provided');
-    return NextResponse.json(
-      { error: 'Trip ID is required' },
-      { status: 400 }
-    );
-  }
-
-  const trip = await trips.get(tripId);
-  if (!trip) {
-    console.error(' [API/join/GET] Trip not found:', tripId);
-    return NextResponse.json(
-      { error: 'Trip not found' },
-      { status: 404 }
-    );
-  }
-
-  console.log(' [API/join/GET] Trip found:', trip);
-  return NextResponse.json({
-    success: true,
-    trip,
-  });
 }
 
 // Helper function to broadcast updates to all connected clients
