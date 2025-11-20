@@ -39,6 +39,7 @@ export async function GET(request: NextRequest) {
         destination: trip.destination,
         purpose: trip.purpose,
         requiredMembers: trip.requiredMembers,
+        members: trip.members, // Include full members array for polling
         currentMembers: trip.members.length,
         isLinkActive: trip.isLinkActive,
         linkExpiresAt: trip.linkExpiresAt,

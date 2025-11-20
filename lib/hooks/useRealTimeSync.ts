@@ -3,12 +3,73 @@ import { useTripStore } from '../store';
 
 export function useRealTimeSync(tripId: string | null) {
   const eventSourceRef = useRef<EventSource | null>(null);
-  const { addMember, removeMember, members, addPoll, updatePoll, setActivePoll, setStep, addHotel } = useTripStore();
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const { addMember, removeMember, members, addPoll, updatePoll, setActivePoll, setStep, addHotel, isDiscountUnlocked, currentStep } = useTripStore();
 
   useEffect(() => {
     if (!tripId) return;
 
-    // Create EventSource connection for Server-Sent Events
+    // Polling fallback for Vercel (every 3 seconds)
+    const pollTripUpdates = async () => {
+      try {
+        const response = await fetch(`/api/social-cart/join?tripId=${tripId}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.trip) {
+            const currentMembers = useTripStore.getState().members;
+            const serverMembers = data.trip.members || [];
+            
+            // Check if there are new members
+            if (serverMembers.length > currentMembers.length) {
+              console.log(`🔄 [Polling] Detected ${serverMembers.length - currentMembers.length} new members`);
+              
+              // Add missing members
+              serverMembers.forEach((serverMember: any) => {
+                const exists = currentMembers.find(m => m.id === serverMember.id);
+                if (!exists) {
+                  console.log(`👥 [Polling] Adding member: ${serverMember.name}`);
+                  addMember({
+                    name: serverMember.name,
+                    avatar: serverMember.avatar,
+                    isAdmin: serverMember.isAdmin,
+                    mobile: serverMember.mobile,
+                  });
+                }
+              });
+              
+              // Check if discount should be unlocked
+              const updatedMembers = useTripStore.getState().members;
+              const requiredMembers = data.trip.requiredMembers;
+              if (updatedMembers.length >= requiredMembers && !useTripStore.getState().isDiscountUnlocked) {
+                console.log('🎉 [Polling] All members joined! Unlocking discount...');
+                useTripStore.setState({ isDiscountUnlocked: true });
+                
+                // Auto-advance to poll screen if on hub
+                if (useTripStore.getState().currentStep === 'hub') {
+                  console.log('🎉 [Polling] Advancing to poll screen');
+                  useTripStore.getState().setStep('poll');
+                }
+                
+                // Trigger confetti
+                if (typeof window !== 'undefined') {
+                  import('../confetti').then(({ triggerConfetti }) => {
+                    triggerConfetti();
+                  });
+                }
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('❌ [Polling] Error fetching trip updates:', error);
+      }
+    };
+
+    // Start polling immediately and then every 3 seconds
+    pollTripUpdates();
+    pollingIntervalRef.current = setInterval(pollTripUpdates, 3000);
+
+    // Create EventSource connection for Server-Sent Events (primary method)
     const eventSource = new EventSource(`/api/social-cart/events?tripId=${tripId}`);
     eventSourceRef.current = eventSource;
 
@@ -229,6 +290,10 @@ export function useRealTimeSync(tripId: string | null) {
       if (eventSourceRef.current) {
         eventSourceRef.current.close();
         console.log('🔌 Real-time connection closed');
+      }
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        console.log('🔌 Polling stopped');
       }
     };
   }, [tripId, addMember, removeMember, members, addPoll, updatePoll, setActivePoll, setStep, addHotel]);
