@@ -298,13 +298,18 @@ export function useRealTimeSync(tripId: string | null) {
           case 'HOTEL_VOTING_CLOSED':
             console.log('🔒 [SSE] Hotel voting closed, winner:', message.data.selectedHotel);
             useTripStore.setState({ 
-              hotelVotingStatus: 'closed',
+              hotelVotingStatus: message.data.votingStatus,
               selectedHotel: message.data.selectedHotel,
+              hotelBookingStatus: message.data.hotelBookingStatus || null,
             });
             break;
 
           case 'BOOKING_CONFIRMED':
             console.log('📋 [SSE] Booking confirmed:', message.data.bookingId);
+            useTripStore.setState({
+              hotelBookingStatus: 'confirmed',
+              bookingConfirmation: message.data,
+            });
             // Dispatch custom event for booking confirmation message in chat
             if (typeof window !== 'undefined') {
               window.dispatchEvent(new CustomEvent('booking-confirmed', { 

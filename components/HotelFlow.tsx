@@ -7,11 +7,38 @@ import HotelVoting from './HotelVoting';
 import { motion } from 'framer-motion';
 
 export default function HotelFlow() {
-  const { tripId, members, currentUserId, destination, shortlistedHotels, addHotel } = useTripStore();
+  const { tripId, members, currentUserId, destination, shortlistedHotels, addHotel, setStep, hotelVotingStatus } = useTripStore();
   const [hasSharedShortlist, setHasSharedShortlist] = useState(false);
 
   const currentUser = members.find(m => m.id === currentUserId);
   const isAdmin = currentUser?.isAdmin || false;
+
+  const handleResetHotelSelection = () => {
+    if (hotelVotingStatus === 'closed') {
+      alert('Hotel voting is already closed. Please continue with booking.');
+      return;
+    }
+    if (!confirm('Are you sure you want to reset hotel selection? This will clear the current shortlist.')) return;
+    
+    // Reset hotel-related state
+    useTripStore.setState({ 
+      shortlistedHotels: [],
+      hotelVotingStatus: null,
+      hotelVotingExpiresAt: null,
+    });
+    setHasSharedShortlist(false);
+    
+    console.log('🔄 [HotelFlow] Hotel selection reset by admin');
+  };
+
+  const handleLeaveHotelStep = () => {
+    if (!confirm('Are you sure you want to go back? Your votes will be saved.')) return;
+    
+    // Go back to polling step
+    setStep('poll');
+    
+    console.log('👋 [HotelFlow] User left hotel step');
+  };
 
   const handleShareShortlist = async (hotels: Hotel[]) => {
     try {
@@ -78,5 +105,33 @@ export default function HotelFlow() {
   }
 
   // Everyone sees voting once shortlist is shared
-  return <HotelVoting />;
+  return (
+    <div>
+      <HotelVoting />
+      
+      {/* Admin: Review/Reset Hotel Selection Button */}
+      {isAdmin && hotelVotingStatus !== 'closed' && (
+        <div className="fixed top-20 right-6 z-50">
+          <button
+            onClick={handleResetHotelSelection}
+            className="bg-white text-orange-600 border-2 border-orange-600 px-4 py-2 rounded-lg font-semibold shadow-lg hover:bg-orange-50 transition-all"
+          >
+            🔄 Review Hotel Selection
+          </button>
+        </div>
+      )}
+      
+      {/* Non-Admin: Leave Hotel Step Button */}
+      {!isAdmin && (
+        <div className="fixed top-20 right-6 z-50">
+          <button
+            onClick={handleLeaveHotelStep}
+            className="bg-white text-gray-700 border-2 border-gray-300 px-4 py-2 rounded-lg font-semibold shadow-lg hover:bg-gray-50 transition-all"
+          >
+            ← Back to Polls
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }

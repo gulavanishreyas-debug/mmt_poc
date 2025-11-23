@@ -41,6 +41,16 @@ export interface HotelVote {
   comment?: string;
 }
 
+export interface BookingConfirmation {
+  bookingId: string;
+  hotelName: string;
+  checkIn: string;
+  checkOut: string;
+  roomType?: string;
+  finalPrice: number;
+  groupSize: number;
+}
+
 export interface Hotel {
   id: string;
   name: string;
@@ -85,6 +95,8 @@ export interface TripState {
   selectedHotel: Hotel | null;
   hotelVotingStatus: 'active' | 'closed' | null;
   hotelVotingExpiresAt: string | null;
+  hotelBookingStatus: 'pending' | 'confirmed' | null;
+  bookingConfirmation: BookingConfirmation | null;
   
   // UI State
   showTripHub: boolean;
@@ -135,6 +147,8 @@ export const useTripStore = create<TripState>((set, get) => ({
   selectedHotel: null,
   hotelVotingStatus: null,
   hotelVotingExpiresAt: null,
+  hotelBookingStatus: null,
+  bookingConfirmation: null,
   showTripHub: false,
   currentStep: 'home',
   
@@ -299,6 +313,8 @@ export const useTripStore = create<TripState>((set, get) => ({
       activePoll: null,
       shortlistedHotels: [],
       selectedHotel: null,
+      hotelBookingStatus: null,
+      bookingConfirmation: null,
       showTripHub: false,
       currentStep: 'home',
     });

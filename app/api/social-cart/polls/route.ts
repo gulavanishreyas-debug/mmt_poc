@@ -6,7 +6,7 @@ export async function POST(request: NextRequest) {
     const { tripId, poll, pollType, duration } = await request.json();
 
     console.log('📊 [API/polls/POST] Creating poll for trip:', tripId);
-    console.log('📊 [API/polls/POST] Poll data:', { poll, pollType, duration });
+    console.log('📊 [API/polls/POST] Poll payload:', { poll, pollType, duration });
 
     if (!tripId) {
       return NextResponse.json(
@@ -28,15 +28,40 @@ export async function POST(request: NextRequest) {
       trip.polls = [];
     }
 
-    // If pollType is provided, create the poll automatically
-    let pollData = poll;
-    if (pollType) {
-      const pollId = Date.now().toString();
-      const now = new Date();
+    const now = new Date();
+    let pollData: any;
+
+    const buildOptions = (rawOptions: any[]) =>
+      rawOptions.map((opt, idx) => {
+        if (typeof opt === 'string') {
+          return { id: `opt${idx}`, text: opt, votes: [] };
+        }
+        return {
+          id: opt.id || `opt${idx}`,
+          text: opt.text,
+          votes: opt.votes || [],
+        };
+      });
+
+    if (poll) {
+      const pollDuration = poll.duration || duration || 300;
+      const expiresAt = new Date(now.getTime() + pollDuration * 1000).toISOString();
+
+      pollData = {
+        id: poll.id || `${poll.type}-${Date.now()}`,
+        type: poll.type,
+        question: poll.question,
+        options: buildOptions(poll.options || []),
+        createdBy: poll.createdBy || 'admin',
+        createdAt: poll.createdAt || now.toISOString(),
+        status: poll.status || 'active',
+        duration: pollDuration,
+        expiresAt,
+      };
+    } else if (pollType) {
       const pollDuration = duration || 300; // Default 5 minutes
       const expiresAt = new Date(now.getTime() + pollDuration * 1000);
 
-      // Helper to format a single date (e.g. 20–22 Nov 2025)
       const formatDate = (date: Date) =>
         date.toLocaleDateString('en-IN', {
           day: '2-digit',
@@ -44,21 +69,18 @@ export async function POST(request: NextRequest) {
           year: 'numeric',
         });
 
-      // Helper to build a range starting N days from today
       const makeRange = (startOffsetDays: number, endOffsetDays: number) => {
         const start = new Date(now.getTime() + startOffsetDays * 24 * 60 * 60 * 1000);
         const end = new Date(now.getTime() + endOffsetDays * 24 * 60 * 60 * 1000);
         return `${formatDate(start)} – ${formatDate(end)}`;
       };
 
-      // Build dynamic date ranges relative to today
       const dynamicDateOptions = [
-        makeRange(3, 5),   // ~Coming weekend / next few days
-        makeRange(7, 9),   // Following week
-        makeRange(14, 16), // Two weeks out
+        makeRange(3, 5),
+        makeRange(7, 9),
+        makeRange(14, 16),
       ];
 
-      // Create poll based on type
       const pollTemplates: any = {
         budget: {
           question: "What's your budget range for this trip?",
@@ -90,7 +112,7 @@ export async function POST(request: NextRequest) {
       };
 
       pollData = {
-        id: pollId,
+        id: `${pollType}-${Date.now()}`,
         type: pollType,
         ...pollTemplates[pollType],
         createdBy: 'admin',
@@ -99,15 +121,18 @@ export async function POST(request: NextRequest) {
         duration: pollDuration,
         expiresAt: expiresAt.toISOString(),
       };
+    } else {
+      return NextResponse.json(
+        { error: 'Poll data or type is required' },
+        { status: 400 }
+      );
     }
 
-    // Add poll to trip
     trip.polls.push(pollData);
     await trips.set(tripId, trip);
 
     console.log('✅ [API/polls/POST] Poll created successfully');
 
-    // Broadcast to all connected clients
     broadcastToTrip(tripId, {
       type: 'POLL_CREATED',
       data: { poll: pollData },

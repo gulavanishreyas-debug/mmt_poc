@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const trip = trips.get(tripId);
+    const trip = await trips.get(tripId);
     if (!trip) {
       return NextResponse.json(
         { error: 'Trip not found' },
@@ -31,8 +31,11 @@ export async function POST(request: NextRequest) {
       bookingId,
       confirmedAt: new Date().toISOString(),
     };
+
+    (trip as any).hotelBookingStatus = 'confirmed';
+    (trip as any).bookingConfirmation = (trip as any).booking;
     
-    trips.set(tripId, trip);
+    await trips.set(tripId, trip);
 
     console.log('✅ [API/booking/confirm/POST] Booking confirmed:', bookingId);
 

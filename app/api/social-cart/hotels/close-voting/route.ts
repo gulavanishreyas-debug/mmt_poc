@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const trip = trips.get(tripId);
+    const trip = await trips.get(tripId);
     if (!trip) {
       return NextResponse.json(
         { error: 'Trip not found' },
@@ -38,9 +38,11 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // Store selected hotel
+    // Store selected hotel & booking status
     (trip as any).selectedHotel = winningHotel;
-    trips.set(tripId, trip);
+    (trip as any).hotelBookingStatus = 'pending';
+    
+    await trips.set(tripId, trip);
 
     console.log('✅ [API/hotels/close-voting/POST] Voting closed, winner:', (winningHotel as any)?.name);
 
@@ -50,6 +52,7 @@ export async function POST(request: NextRequest) {
       data: { 
         votingStatus: 'closed',
         selectedHotel: winningHotel,
+        hotelBookingStatus: 'pending',
       },
     });
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Check, Star, Users, Calendar, Home, Share2, Sparkles } from 'lucide-react';
 import { useTripStore } from '@/lib/store';
@@ -15,11 +15,27 @@ export default function BookingScreen() {
     destination,
     requiredMembers,
     tripId,
+    setStep,
+    currentUserId,
+    bookingConfirmation,
   } = useTripStore();
 
-  const [bookingComplete, setBookingComplete] = useState(false);
+  const [bookingComplete, setBookingComplete] = useState(Boolean(bookingConfirmation));
   const [selectedRoom, setSelectedRoom] = useState<string>('');
-  const [bookingId, setBookingId] = useState<string>('');
+  const [bookingId, setBookingId] = useState<string>(bookingConfirmation?.bookingId || '');
+  const currentUser = members.find(m => m.id === currentUserId);
+  const isAdmin = currentUser?.isAdmin;
+
+  useEffect(() => {
+    if (bookingConfirmation) {
+      setBookingComplete(true);
+      setBookingId(bookingConfirmation.bookingId);
+    }
+  }, [bookingConfirmation]);
+
+  const handleBackToCart = () => {
+    setStep('poll');
+  };
 
   const roomTypes = [
     {
@@ -89,6 +105,13 @@ export default function BookingScreen() {
 
       const data = await response.json();
       setBookingId(data.bookingId);
+      useTripStore.setState({
+        hotelBookingStatus: 'confirmed',
+        bookingConfirmation: {
+          bookingId: data.bookingId,
+          ...bookingDetails,
+        },
+      });
       
       triggerSuccessConfetti();
       setBookingComplete(true);
@@ -120,6 +143,14 @@ export default function BookingScreen() {
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
         >
+          {isAdmin && (
+            <button
+              onClick={handleBackToCart}
+              className="mb-6 inline-flex items-center gap-2 rounded-full border border-mmt-blue px-4 py-2 text-sm font-semibold text-mmt-blue transition-colors hover:bg-mmt-blue hover:text-white"
+            >
+              ← Back to Main Cart
+            </button>
+          )}
           {/* Success Animation */}
           <motion.div
             className="text-center mb-8"
@@ -301,6 +332,16 @@ export default function BookingScreen() {
   return (
     <div className="min-h-screen py-8 px-4">
       <div className="max-w-4xl mx-auto">
+        {isAdmin && (
+          <div className="mb-6 flex justify-end">
+            <button
+              onClick={handleBackToCart}
+              className="inline-flex items-center gap-2 rounded-full border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-100"
+            >
+              ← Back to Main Cart
+            </button>
+          </div>
+        )}
         {/* Header */}
         <motion.div
           className="text-center mb-8"

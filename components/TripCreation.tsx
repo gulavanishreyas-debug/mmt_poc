@@ -1,11 +1,26 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, MapPin, Users, Heart, Music, Plane } from 'lucide-react';
 import { useTripStore, TripPurpose } from '@/lib/store';
 import { createTrip as createTripAPI } from '@/lib/api';
 import { saveTripToLocalStorage } from '@/lib/localStorage';
+
+const DESTINATIONS = [
+  'Goa',
+  'Bali',
+  'Dubai',
+  'Paris',
+  'New York',
+  'Maldives',
+  'Singapore',
+  'Istanbul',
+  'Phuket',
+  'Rome',
+  'Lisbon',
+  'Barcelona',
+];
 
 interface TripCreationProps {
   onClose?: () => void;
@@ -16,10 +31,24 @@ export default function TripCreation({ onClose }: TripCreationProps = {}) {
   
   const [tripName, setTripName] = useState('');
   const [destination, setDestination] = useState('');
+  const [destinationSearch, setDestinationSearch] = useState('');
+  const [isDestinationOpen, setIsDestinationOpen] = useState(false);
+  const destinationWrapperRef = useRef<HTMLDivElement>(null);
   const [purpose, setPurpose] = useState<TripPurpose | null>(null);
   const [requiredMembers, setRequiredMembers] = useState(5);
   const [adminName, setAdminName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (destinationWrapperRef.current && !destinationWrapperRef.current.contains(event.target as Node)) {
+        setIsDestinationOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const purposes = [
     {
@@ -256,15 +285,44 @@ export default function TripCreation({ onClose }: TripCreationProps = {}) {
             <label className="block text-lg font-semibold text-gray-900 mb-3">
               Where are you headed? 📍
             </label>
-            <div className="relative">
+            <div
+              ref={destinationWrapperRef}
+              className="relative"
+            >
               <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
-                value={destination}
-                onChange={(e) => setDestination(e.target.value)}
-                placeholder="e.g., Goa, Bali, Dubai"
+                value={destinationSearch}
+                onChange={(e) => {
+                  setDestination('');
+                  setDestinationSearch(e.target.value);
+                  setIsDestinationOpen(true);
+                }}
+                onFocus={() => setIsDestinationOpen(true)}
+                placeholder="Select or search a destination"
                 className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-mmt-blue focus:outline-none text-lg"
               />
+              {isDestinationOpen && (
+                <div className="absolute left-0 right-0 z-10 mt-2 max-h-56 overflow-auto rounded-xl border border-gray-200 bg-white shadow-lg">
+                  {DESTINATIONS.filter(dest => dest.toLowerCase().includes(destinationSearch.toLowerCase())).map((dest) => (
+                    <button
+                      key={dest}
+                      type="button"
+                      onClick={() => {
+                        setDestination(dest);
+                        setDestinationSearch(dest);
+                        setIsDestinationOpen(false);
+                      }}
+                      className="w-full px-4 py-3 text-left text-lg hover:bg-slate-50 focus:bg-slate-50"
+                    >
+                      {dest}
+                    </button>
+                  ))}
+                  {!DESTINATIONS.filter(dest => dest.toLowerCase().includes(destinationSearch.toLowerCase())).length && (
+                    <div className="px-4 py-3 text-sm text-gray-500">No destinations found.</div>
+                  )}
+                </div>
+              )}
             </div>
           </motion.div>
 

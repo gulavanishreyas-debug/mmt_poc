@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ThumbsUp, ThumbsDown, Star, MapPin, Wifi, Coffee, Dumbbell, Waves, MessageSquare, X } from 'lucide-react';
+import { ThumbsUp, ThumbsDown, Star, Wifi, Coffee, Dumbbell, Waves, MessageSquare, X } from 'lucide-react';
 import { useTripStore, Hotel, HotelVote } from '@/lib/store';
 import { triggerConfetti } from '@/lib/confetti';
 
@@ -10,15 +10,17 @@ export default function HotelVoting() {
   const {
     shortlistedHotels,
     addHotel,
-    voteHotel,
-    selectHotel,
     currentUserId,
     members,
     consensusBudget,
     consensusAmenities,
+    hotelVotingStatus,
+    selectedHotel,
+    setStep,
+    tripId,
+    hotelBookingStatus,
+    bookingConfirmation,
   } = useTripStore();
-
-  const [showResults, setShowResults] = useState(false);
 
   useEffect(() => {
     // Mock hotel data - Admin would have shortlisted these
@@ -89,13 +91,58 @@ export default function HotelVoting() {
   const [selectedHotelForComment, setSelectedHotelForComment] = useState<{ id: string; vote: 'love' | 'dislike' } | null>(null);
   const [commentText, setCommentText] = useState('');
 
-  const handleVoteClick = (hotelId: string, vote: 'love' | 'dislike') => {
+  const canVote = hotelVotingStatus !== 'closed';
+
+  const hotelConsensus = useMemo(() => {
+    const entries = shortlistedHotels.map((hotel) => {
+      const votes = Object.values(hotel.votes || {}).length;
+      return { hotel, count: votes };
+    });
+
+    const totalVotes = entries.reduce((sum, entry) => sum + entry.count, 0);
+    const withPercentages = entries
+      .map((entry) => ({
+        ...entry,
+        percentage: totalVotes ? Math.round((entry.count / totalVotes) * 100) : 0,
+      }))
+      .sort((a, b) => b.count - a.count);
+
+    const maxCount = withPercentages.length ? withPercentages[0].count : 0;
+    const topHotels = maxCount > 0 ? withPercentages.filter((entry) => entry.count === maxCount).map((entry) => entry.hotel) : [];
+
+    return { entries: withPercentages, totalVotes, topHotels };
+  }, [shortlistedHotels]);
+
+  useEffect(() => {
+    console.log('📊 [HotelVoting] Consensus snapshot', {
+      totalVotes: hotelConsensus.totalVotes,
+      topHotels: hotelConsensus.topHotels.map((hotel) => hotel.name),
+      isVotingOpen: canVote,
+    });
+  }, [hotelConsensus, canVote]);
+
+  const getUserVote = (hotel?: Hotel): HotelVote | undefined => {
+    if (!currentUserId || !hotel) return undefined;
+    return hotel.votes[currentUserId];
+  };
+
+  const handleVoteClick = (hotelId: string) => {
+    if (!canVote) {
+      return;
+    }
+    const targetHotel = shortlistedHotels.find((hotel) => hotel.id === hotelId);
+    const existingVote = getUserVote(targetHotel);
+    const vote: 'love' | 'dislike' = existingVote?.vote === 'love' ? 'dislike' : 'love';
     setSelectedHotelForComment({ id: hotelId, vote });
     setCommentModalOpen(true);
   };
 
   const handleSubmitVote = async () => {
     if (!selectedHotelForComment || !currentUserId) return;
+    if (!canVote) {
+      setCommentModalOpen(false);
+      return;
+    }
     
     try {
       const { tripId } = useTripStore.getState();
@@ -128,10 +175,6 @@ export default function HotelVoting() {
     }
   };
 
-  const getVoteCount = (hotel: Hotel, voteType: 'love' | 'dislike') => {
-    return Object.values(hotel.votes).filter((v: HotelVote) => v.vote === voteType).length;
-  };
-
   const getMatchPercentage = (hotel: Hotel) => {
     let matches = 0;
     let total = 0;
@@ -156,24 +199,46 @@ export default function HotelVoting() {
     return total > 0 ? Math.round((matches / total) * 100) : 0;
   };
 
-  const handleProceedToBook = () => {
-    // Find hotel with most love votes
-    const topHotel = shortlistedHotels.reduce((prev, current) => {
-      const prevLoves = getVoteCount(prev, 'love');
-      const currentLoves = getVoteCount(current, 'love');
-      return currentLoves > prevLoves ? current : prev;
-    });
+  const handleProceedToBook = async () => {
+    if (!tripId || !isAdmin) return;
 
-    triggerConfetti();
-    selectHotel(topHotel.id);
+    // If voting already closed, just navigate admin back to booking
+    if (hotelVotingStatus === 'closed') {
+      setStep('booking');
+      return;
+    }
+
+    try {
+      console.log('📋 [HotelVoting] Admin closing voting and proceeding to booking...');
+
+      const response = await fetch('/api/social-cart/hotels/close-voting', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tripId }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to close voting');
+      }
+
+      const { selectedHotel: winner } = await response.json();
+      console.log('✅ [HotelVoting] Voting closed, winner:', winner?.name);
+
+      useTripStore.setState({
+        selectedHotel: winner,
+        hotelVotingStatus: 'closed',
+        hotelBookingStatus: 'pending',
+      });
+
+      triggerConfetti();
+      setStep('booking');
+    } catch (error) {
+      console.error('❌ [HotelVoting] Failed to close voting:', error);
+      alert('Failed to proceed to booking. Please try again.');
+    }
   };
 
   const isAdmin = members.find(m => m.id === currentUserId)?.isAdmin;
-  const currentUserVoted = shortlistedHotels.some(h => currentUserId && h.votes[currentUserId]);
-  
-  const getUserVote = (hotel: Hotel): HotelVote | undefined => {
-    return currentUserId ? hotel.votes[currentUserId] : undefined;
-  };
 
   const amenityIcons: { [key: string]: any } = {
     pool: Waves,
@@ -201,6 +266,19 @@ export default function HotelVoting() {
           </p>
         </motion.div>
 
+        {hotelVotingStatus === 'closed' && selectedHotel && (
+          <motion.div
+            className="card mb-8 border border-green-200 bg-green-50"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <h3 className="text-xl font-bold text-green-800 mb-2">Voting Closed</h3>
+            <p className="text-green-700">
+              {selectedHotel.name} is the final pick for your stay. {isAdmin ? 'You can now continue to the booking page.' : 'The admin is wrapping up the booking for everyone.'}
+            </p>
+          </motion.div>
+        )}
+
         {/* Consensus Summary */}
         <motion.div
           className="card mb-8 bg-gradient-to-r from-blue-50 to-purple-50"
@@ -226,11 +304,60 @@ export default function HotelVoting() {
           </div>
         </motion.div>
 
+        {/* Hotel Consensus Panel */}
+        <motion.div
+          className="card mb-8 border border-mmt-blue/20"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="text-sm text-mmt-blue font-semibold uppercase tracking-wide">
+                {canVote ? 'Live consensus' : 'Final consensus'}
+              </p>
+              <h3 className="text-2xl font-bold text-gray-900">
+                {hotelConsensus.totalVotes > 0
+                  ? `${hotelConsensus.totalVotes} vote${hotelConsensus.totalVotes === 1 ? '' : 's'} collected`
+                  : 'No votes submitted yet'}
+              </h3>
+            </div>
+            {canVote && (
+              <span className="text-xs text-gray-500">updates in real-time</span>
+            )}
+          </div>
+
+          {hotelConsensus.totalVotes === 0 ? (
+            <p className="text-sm text-gray-600">
+              Ask your crew to react so we can surface the front-runners here.
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {hotelConsensus.entries.map(({ hotel, percentage }, index) => (
+                <div key={hotel.id} className="space-y-2">
+                  <div className="flex items-center justify-between text-sm font-medium text-gray-800">
+                    <span>
+                      {index + 1}. {hotel.name}
+                    </span>
+                    <span>{percentage}%</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
+                    <div
+                      className={`h-full ${
+                        index === 0 ? 'bg-mmt-blue' : 'bg-mmt-purple'
+                      } transition-all duration-500`}
+                      style={{ width: `${percentage}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </motion.div>
+
         {/* Hotels Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           {shortlistedHotels.map((hotel, index) => {
-            const loveCount = getVoteCount(hotel, 'love');
-            const dislikeCount = getVoteCount(hotel, 'dislike');
             const matchPercentage = getMatchPercentage(hotel);
             const userVote = getUserVote(hotel);
 
@@ -285,35 +412,25 @@ export default function HotelVoting() {
                   )}
                 </div>
 
-                {/* Voting Buttons */}
-                <div className="flex gap-3 mb-3">
+                {/* Like toggle */}
+                <div className="mb-3">
                   <motion.button
-                    onClick={() => handleVoteClick(hotel.id, 'love')}
-                    className={`flex-1 py-3 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all ${
+                    onClick={() => handleVoteClick(hotel.id)}
+                    disabled={!canVote}
+                    className={`w-full py-3 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all ${
                       userVote?.vote === 'love'
                         ? 'bg-green-500 text-white'
-                        : 'bg-green-50 text-green-600 hover:bg-green-100'
-                    }`}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    } ${!canVote ? 'cursor-not-allowed opacity-50' : ''}`}
+                    whileHover={{ scale: canVote ? 1.03 : 1 }}
+                    whileTap={{ scale: canVote ? 0.97 : 1 }}
                   >
                     <ThumbsUp className="w-5 h-5" />
-                    <span>{loveCount}</span>
+                    <span>{userVote?.vote === 'love' ? 'You liked this' : 'Like'}</span>
                   </motion.button>
-
-                  <motion.button
-                    onClick={() => handleVoteClick(hotel.id, 'dislike')}
-                    className={`flex-1 py-3 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all ${
-                      userVote?.vote === 'dislike'
-                        ? 'bg-red-500 text-white'
-                        : 'bg-red-50 text-red-600 hover:bg-red-100'
-                    }`}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <ThumbsDown className="w-5 h-5" />
-                    <span>{dislikeCount}</span>
-                  </motion.button>
+                  {!canVote && (
+                    <p className="text-xs text-center text-gray-500 mt-2">Voting has ended</p>
+                  )}
                 </div>
                 
                 {/* User's Comment */}
@@ -329,15 +446,6 @@ export default function HotelVoting() {
                   </div>
                 )}
 
-                {/* Vote Status */}
-                {loveCount > 0 && (
-                  <div className="text-sm text-center">
-                    <span className="text-green-600 font-semibold">
-                      🔥 {loveCount} {loveCount === 1 ? 'friend' : 'friends'} loved this!
-                    </span>
-                  </div>
-                )}
-
                 {/* Match Info */}
                 {matchPercentage >= 70 && (
                   <div className="mt-3 p-2 bg-green-50 rounded-lg text-xs text-center text-green-700">
@@ -350,22 +458,56 @@ export default function HotelVoting() {
         </div>
 
         {/* Admin Actions */}
-        {isAdmin && currentUserVoted && (
+        {isAdmin && shortlistedHotels.length > 0 && (
           <motion.div
             className="card bg-gradient-to-r from-mmt-blue to-mmt-purple text-white text-center"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            <h3 className="text-xl font-bold mb-2">Ready to proceed?</h3>
-            <p className="mb-4">The group has voted! Time to book the winning hotel.</p>
+            <h3 className="text-xl font-bold mb-2">
+              {hotelVotingStatus === 'closed' ? 'Ready to finalize booking?' : 'Ready to proceed?'}
+            </h3>
+            <p className="mb-4">
+              {hotelVotingStatus === 'closed'
+                ? 'Only you (the admin) will move to the booking screen. Everyone else will stay here until you finish.'
+                : 'Lock the winning hotel and move to the booking screen just for you.'}
+            </p>
             <motion.button
               onClick={handleProceedToBook}
               className="bg-white text-mmt-blue px-8 py-3 rounded-full font-bold"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
-              Proceed to Book →
+              {hotelVotingStatus === 'closed' ? 'Open Booking Page' : 'Close Voting & Proceed →'}
             </motion.button>
+          </motion.div>
+        )}
+
+        {/* Booking status for members */}
+        {hotelBookingStatus === 'pending' && (
+          <motion.div
+            className="card bg-yellow-50 border border-yellow-200 text-yellow-800 text-center"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <p>
+              {isAdmin
+                ? 'Continue the booking flow to lock the rooms. Your group will be notified once you finish.'
+                : 'The admin is booking the rooms for everyone. Sit tight—we will notify you once it is confirmed!'}
+            </p>
+          </motion.div>
+        )}
+
+        {hotelBookingStatus === 'confirmed' && bookingConfirmation && (
+          <motion.div
+            className="card bg-green-50 border border-green-200 text-green-800"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <h3 className="text-xl font-bold mb-2">🎉 Booking Confirmed</h3>
+            <p>
+              {bookingConfirmation.hotelName} has been booked (ID: {bookingConfirmation.bookingId}). Check-in on {bookingConfirmation.checkIn} — get ready!
+            </p>
           </motion.div>
         )}
 
