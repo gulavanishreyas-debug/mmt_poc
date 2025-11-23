@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const trip = trips.get(tripId);
+    const trip = await trips.get(tripId);
     if (!trip) {
       return NextResponse.json({ error: 'Trip not found' }, { status: 404 });
     }
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
       trip.chatMessages = [];
     }
     trip.chatMessages.push(chatMessage);
-    trips.set(tripId, trip);
+    await trips.set(tripId, trip);
 
     console.log('✅ [API/chat] Message saved:', chatMessage.id);
 
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Missing tripId' }, { status: 400 });
     }
 
-    const trip = trips.get(tripId);
+    const trip = await trips.get(tripId);
     if (!trip) {
       return NextResponse.json({ error: 'Trip not found' }, { status: 404 });
     }
