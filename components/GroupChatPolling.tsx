@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, CheckCircle, Users, Calendar, DollarSign, Sparkles, TrendingUp, BarChart3, MapPin, Star, X } from 'lucide-react';
+import { Send, CheckCircle, Users, Calendar, DollarSign, Sparkles, TrendingUp, BarChart3, MapPin, Star, X, MessageSquare, ChevronDown, ChevronUp } from 'lucide-react';
 import { useTripStore } from '@/lib/store';
 
 interface Poll {
@@ -40,6 +40,7 @@ interface Notification {
 export default function GroupChatPolling() {
   const { tripId, currentUserId, members, tripName, destination, polls, activePoll, addPoll, updatePoll, setActivePoll, shortlistedHotels, addHotel, hotelVotingStatus, hotelVotingExpiresAt, selectedHotel, bookingConfirmation } = useTripStore();
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [chatNotifications, setChatNotifications] = useState<Notification[]>([]); // Persistent chat notifications
   const [showPollWizard, setShowPollWizard] = useState(false);
   const [chatMessages, setChatMessages] = useState<any[]>([]);
   const [messageInput, setMessageInput] = useState('');
@@ -50,9 +51,12 @@ export default function GroupChatPolling() {
   const [pollTimers, setPollTimers] = useState<Record<string, string>>({});
   const [showHotelSelection, setShowHotelSelection] = useState(false);
   const [hotelVotingTimer, setHotelVotingTimer] = useState<string>('');
+  const [collapsedPolls, setCollapsedPolls] = useState<Set<string>>(new Set());
   const pollsEndRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const processedBookingMessages = useRef(new Set<string>());
+  const notifiedPollCreations = useRef(new Set<string>()); // Track which polls we've notified about (creation)
+  const notifiedPollClosures = useRef(new Set<string>()); // Track which polls we've notified about (closure)
   
   const currentUser = members.find(m => m.id === currentUserId);
   const isAdmin = currentUser?.isAdmin || false;
@@ -201,39 +205,65 @@ export default function GroupChatPolling() {
     if (polls.length === 0) return;
     
     const latestPoll = polls[polls.length - 1];
-    const existingNotif = notifications.find(n => n.id === `poll-${latestPoll.id}`);
     
-    if (!existingNotif && latestPoll.createdBy !== currentUserId) {
+    // Only notify if we haven't already notified about this poll's creation
+    if (!notifiedPollCreations.current.has(latestPoll.id) && latestPoll.createdBy !== currentUserId) {
       const pollNotif: Notification = {
         id: `poll-${latestPoll.id}`,
         type: 'poll_created',
         message: `📊 New poll: "${latestPoll.question}" - Cast your vote now!`,
         timestamp: new Date().toISOString(),
       };
-      setNotifications(prev => [...prev, pollNotif]);
+      setNotifications(prev => [...prev, pollNotif]); // Floating notification (auto-dismiss)
+      setChatNotifications(prev => [...prev, pollNotif]); // Persistent chat notification
+      notifiedPollCreations.current.add(latestPoll.id);
+      console.log('📢 [Notifications] Poll created notification added:', pollNotif.id);
     }
-  }, [polls, currentUserId, notifications]);
+  }, [polls.length]); // Only depend on polls.length, not the entire polls array
 
   // Watch for closed polls and add winner notification
   useEffect(() => {
     polls.forEach(poll => {
-      if (poll.status === 'closed') {
-        const existingNotif = notifications.find(n => n.id === `close-${poll.id}`);
-        if (!existingNotif) {
-          const winner = poll.options.reduce((max, opt) => 
-            opt.votes.length > max.votes.length ? opt : max
-          );
-          const closeNotif: Notification = {
-            id: `close-${poll.id}`,
-            type: 'poll_closed',
-            message: `✅ Poll closed! Winner: "${winner.text}" with ${winner.votes.length} votes 🏆`,
-            timestamp: new Date().toISOString(),
-          };
-          setNotifications(prev => [...prev, closeNotif]);
-        }
+      if (poll.status === 'closed' && !notifiedPollClosures.current.has(poll.id)) {
+        const winner = poll.options.reduce((max, opt) => 
+          opt.votes.length > max.votes.length ? opt : max
+        );
+        const closeNotif: Notification = {
+          id: `close-${poll.id}`,
+          type: 'poll_closed',
+          message: `✅ Poll closed! Winner: "${winner.text}" with ${winner.votes.length} votes 🏆`,
+          timestamp: new Date().toISOString(),
+        };
+        setNotifications(prev => [...prev, closeNotif]); // Floating notification (auto-dismiss)
+        setChatNotifications(prev => [...prev, closeNotif]); // Persistent chat notification
+        notifiedPollClosures.current.add(poll.id);
+        console.log('📢 [Notifications] Poll closed notification added:', poll.id);
+        
+        // Auto-collapse closed polls
+        setCollapsedPolls(prev => new Set([...prev, poll.id]));
+        console.log('📋 [Poll] Auto-collapsed closed poll:', poll.id);
       }
     });
-  }, [polls, notifications]);
+  }, [polls.map(p => p.status).join(',')]); // Only depend on poll statuses changing, not vote counts
+
+  // Auto-dismiss notifications after 15 seconds - only remove first one when timer expires
+  useEffect(() => {
+    if (notifications.length === 0) return;
+    
+    const firstNotif = notifications[0];
+    const timer = setTimeout(() => {
+      setNotifications(prev => {
+        // Only remove if it's still the same notification (by id)
+        if (prev.length > 0 && prev[0].id === firstNotif.id) {
+          return prev.slice(1);
+        }
+        return prev;
+      });
+      console.log('⏰ [Notifications] Auto-dismissed notification:', firstNotif.id);
+    }, 15000);
+
+    return () => clearTimeout(timer);
+  }, [notifications.length, notifications[0]?.id]);
 
   // Load chat messages on mount
   useEffect(() => {
@@ -769,21 +799,6 @@ export default function GroupChatPolling() {
         <div className="max-w-7xl mx-auto h-full flex gap-6 p-6">
           {/* Left Column - Polls */}
           <div className="flex-1 overflow-y-auto space-y-4">
-            {/* Notifications */}
-            {notifications.map((notif) => (
-              <motion.div
-                key={notif.id}
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-blue-50 rounded-lg p-3 border border-blue-200"
-              >
-                <p className="text-sm text-gray-700 font-medium">{notif.message}</p>
-                <p className="text-xs text-gray-500 mt-1">
-                  {new Date(notif.timestamp).toLocaleTimeString()}
-                </p>
-              </motion.div>
-            ))}
-            
             {/* Empty State */}
             {polls.length === 0 && (
               <div className="bg-white rounded-xl shadow-sm p-8 text-center">
@@ -799,16 +814,60 @@ export default function GroupChatPolling() {
             
             {/* Polls */}
             <AnimatePresence>
-              {polls.map((poll) => (
-                <PollCard
-                  key={poll.id}
-                  poll={poll}
-                  onVote={handleVote}
-                  currentUserId={currentUserId || ''}
-                  members={members}
-                  timeRemaining={pollTimers[poll.id]}
-                />
-              ))}
+              {polls.map((poll) => {
+                const isCollapsed = collapsedPolls.has(poll.id);
+                return isCollapsed ? (
+                  <motion.div
+                    key={poll.id}
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="bg-gray-50 rounded-lg border border-gray-200 p-3 hover:bg-gray-100 transition-colors"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-sm font-semibold text-gray-700">
+                            {poll.type === 'budget' ? '💰 Budget' : poll.type === 'dates' ? '📅 Travel Dates' : '✨ Amenities'}
+                          </span>
+                          <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-semibold">
+                            ✅ Closed
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-600 mt-2">
+                          {(() => {
+                            const winner = poll.options.reduce((max, opt) => 
+                              opt.votes.length > max.votes.length ? opt : max
+                            );
+                            return `Winner: ${winner.text}`;
+                          })()}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setCollapsedPolls(prev => {
+                          const newSet = new Set(prev);
+                          newSet.delete(poll.id);
+                          return newSet;
+                        })}
+                        className="flex-shrink-0 p-1 hover:bg-gray-200 rounded transition-colors"
+                        title="Expand poll"
+                      >
+                        <ChevronDown className="w-5 h-5 text-gray-600" />
+                      </button>
+                    </div>
+                  </motion.div>
+                ) : (
+                  <PollCard
+                    key={poll.id}
+                    poll={poll}
+                    onVote={handleVote}
+                    currentUserId={currentUserId || ''}
+                    members={members}
+                    timeRemaining={pollTimers[poll.id]}
+                    onClose={() => setCollapsedPolls(prev => new Set([...prev, poll.id]))}
+                  />
+                );
+              })}
             </AnimatePresence>
             
             {/* Hotel Voting Cards - Show after polls are closed and hotels are shortlisted */}
@@ -995,8 +1054,8 @@ export default function GroupChatPolling() {
               })}
               <div ref={chatEndRef} />
 
-              {/* Poll notifications */}
-              {notifications.slice(1).map((notif) => (
+              {/* Chat Notifications */}
+              {chatNotifications.map((notif) => (
                 <div key={notif.id} className="flex gap-2">
                   <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
                     🔔
@@ -1081,6 +1140,57 @@ export default function GroupChatPolling() {
                   )}
                 </div>
               )}
+
+              {/* Hotel Voting Consensus */}
+              {shortlistedHotels.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-bold text-gray-900">Hotel Voting</h3>
+                    {hotelVotingStatus === 'active' && (
+                      <span className="text-xs text-green-600 font-semibold">● Live</span>
+                    )}
+                    {hotelVotingStatus === 'closed' && (
+                      <span className="text-xs text-gray-500 font-semibold">Closed</span>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    {(() => {
+                      const hotelVotes = shortlistedHotels.map((hotel) => ({
+                        hotel,
+                        count: Object.values(hotel.votes || {}).filter((v: any) => v.vote === 'love').length,
+                      }));
+                      const totalVotes = hotelVotes.reduce((sum, hv) => sum + hv.count, 0);
+                      const sortedHotels = hotelVotes.sort((a, b) => b.count - a.count);
+                      
+                      console.log('🏨 [GroupChatPolling] Hotel voting consensus:', { totalVotes, hotelCount: sortedHotels.length });
+                      
+                      if (totalVotes === 0) {
+                        return (
+                          <p className="text-xs text-gray-500 mt-2">No votes yet</p>
+                        );
+                      }
+                      
+                      return sortedHotels.map(({ hotel, count }, index) => {
+                        const percentage = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
+                        return (
+                          <div key={hotel.id} className="flex items-center gap-2">
+                            <span className="text-xs text-gray-600 flex-1 truncate">
+                              {index + 1}. {hotel.name}
+                            </span>
+                            <div className="w-16 bg-gray-200 rounded-full h-1.5">
+                              <div
+                                className={`h-1.5 rounded-full ${index === 0 ? 'bg-[#0071c2]' : 'bg-purple-500'}`}
+                                style={{ width: `${percentage}%` }}
+                              />
+                            </div>
+                            <span className="text-xs text-gray-600 w-8 text-right">{percentage}%</span>
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+                </div>
+              )}
             </div>
             
             <div className="px-4 py-3 border-t border-gray-200">
@@ -1130,6 +1240,47 @@ export default function GroupChatPolling() {
         )}
       </div>
 
+      {/* Floating Notifications */}
+      <AnimatePresence>
+        <div className="fixed top-6 right-6 z-50 space-y-3 max-w-md">
+          {notifications.map((notif) => (
+            <motion.div
+              key={notif.id}
+              initial={{ opacity: 0, y: -20, x: 400 }}
+              animate={{ opacity: 1, y: 0, x: 0 }}
+              exit={{ opacity: 0, y: -20, x: 400 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              className={`rounded-lg px-4 py-3 shadow-lg border flex items-start gap-3 cursor-pointer hover:shadow-xl transition-shadow ${
+                notif.type === 'welcome'
+                  ? 'bg-green-50 border-green-200'
+                  : notif.type === 'poll_created'
+                  ? 'bg-blue-50 border-blue-200'
+                  : 'bg-orange-50 border-orange-200'
+              }`}
+              onClick={() => {
+                // Allow users to dismiss manually
+                setNotifications(prev => prev.filter(n => n.id !== notif.id));
+              }}
+            >
+              <div className="text-xl flex-shrink-0 mt-0.5">
+                {notif.type === 'welcome' ? '👋' : notif.type === 'poll_created' ? '🗳️' : '✅'}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className={`text-sm font-semibold ${
+                  notif.type === 'welcome'
+                    ? 'text-green-900'
+                    : notif.type === 'poll_created'
+                    ? 'text-blue-900'
+                    : 'text-orange-900'
+                }`}>
+                  {notif.message}
+                </p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </AnimatePresence>
+
       {/* Poll Creator Modal */}
       {showPollWizard && (
         <PollWizardModal
@@ -1156,13 +1307,15 @@ function PollCard({
   onVote,
   currentUserId,
   members,
-  timeRemaining
+  timeRemaining,
+  onClose
 }: { 
   poll: Poll;
   onVote: (pollId: string, optionId: string | string[]) => void;
   currentUserId: string;
   members: any[];
   timeRemaining?: string;
+  onClose?: () => void;
 }) {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]); // For multi-select (amenities)
@@ -1199,8 +1352,19 @@ function PollCard({
       {/* Removed poll header to fix UI glitch */}
 
       <div className="p-6">
-        {/* Poll Title */}
-        <h3 className="font-bold text-xl text-gray-900 mb-4">{poll.question}</h3>
+        {/* Poll Title with Fold Button */}
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <h3 className="font-bold text-xl text-gray-900">{poll.question}</h3>
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="flex-shrink-0 p-1 hover:bg-gray-100 rounded transition-colors"
+              title="Collapse poll"
+            >
+              <ChevronUp className="w-5 h-5 text-gray-600" />
+            </button>
+          )}
+        </div>
       
       {/* Countdown Timer */}
       {!isClosed && timeRemaining && (
@@ -1613,8 +1777,8 @@ function HotelVotingCard({ hotel, currentUserId, tripId, votingClosed }: { hotel
   const [commentText, setCommentText] = useState('');
 
   const userVote = hotel.votes[currentUserId];
-  const loveCount = Object.values(hotel.votes).filter((v: any) => v.vote === 'love').length;
-  const dislikeCount = Object.values(hotel.votes).filter((v: any) => v.vote === 'dislike').length;
+
+  console.log('🏨 [HotelVotingCard] Rendering for user:', currentUserId, 'userVote:', userVote?.vote, 'votingClosed:', votingClosed);
 
   const handleVoteClick = (vote: 'love' | 'dislike') => {
     if (votingClosed) return; // Prevent voting if closed
@@ -1694,64 +1858,39 @@ function HotelVotingCard({ hotel, currentUserId, tripId, votingClosed }: { hotel
             ))}
           </div>
 
-          {/* Voting Buttons */}
-          <div className="flex gap-3 mb-3">
+          {/* Like Button - User's Vote Only */}
+          <div className="mb-3">
             <motion.button
               onClick={() => handleVoteClick('love')}
               disabled={votingClosed}
-              className={`flex-1 py-3 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all ${
-                votingClosed
-                  ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                  : userVote?.vote === 'love'
+              className={`w-full py-3 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all ${
+                userVote?.vote === 'love'
                   ? 'bg-green-500 text-white'
-                  : 'bg-green-50 text-green-600 hover:bg-green-100'
-              }`}
-              whileHover={votingClosed ? {} : { scale: 1.02 }}
-              whileTap={votingClosed ? {} : { scale: 0.98 }}
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              } ${votingClosed ? 'cursor-not-allowed opacity-50' : ''}`}
+              whileHover={votingClosed ? {} : { scale: 1.03 }}
+              whileTap={votingClosed ? {} : { scale: 0.97 }}
             >
               <span>👍</span>
-              <span>{loveCount}</span>
-            </motion.button>
-
-            <motion.button
-              onClick={() => handleVoteClick('dislike')}
-              disabled={votingClosed}
-              className={`flex-1 py-3 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all ${
-                votingClosed
-                  ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                  : userVote?.vote === 'dislike'
-                  ? 'bg-red-500 text-white'
-                  : 'bg-red-50 text-red-600 hover:bg-red-100'
-              }`}
-              whileHover={votingClosed ? {} : { scale: 1.02 }}
-              whileTap={votingClosed ? {} : { scale: 0.98 }}
-            >
-              <span>👎</span>
-              <span>{dislikeCount}</span>
+              <span>{userVote?.vote === 'love' ? 'You liked this' : 'Like'}</span>
             </motion.button>
           </div>
           
           {/* Voting Closed Message */}
           {votingClosed && (
-            <div className="text-center text-sm text-gray-600 mb-3">
-              🔒 Voting has been closed
-            </div>
+            <p className="text-xs text-center text-gray-500 mt-2">Voting has ended</p>
           )}
 
           {/* User's Comment */}
           {userVote?.comment && (
-            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-              <p className="text-xs font-semibold text-blue-900 mb-1">Your comment:</p>
-              <p className="text-sm text-gray-700">{userVote.comment}</p>
-            </div>
-          )}
-
-          {/* Vote Status */}
-          {loveCount > 0 && (
-            <div className="text-sm text-center mt-3">
-              <span className="text-green-600 font-semibold">
-                🔥 {loveCount} {loveCount === 1 ? 'friend' : 'friends'} loved this!
-              </span>
+            <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex items-start gap-2">
+                <MessageSquare className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-xs font-semibold text-blue-900 mb-1">Your comment:</p>
+                  <p className="text-sm text-gray-700">{userVote.comment}</p>
+                </div>
+              </div>
             </div>
           )}
         </div>

@@ -553,7 +553,7 @@ export default function HotelSelection({ destination, onShareShortlist }: HotelS
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
             >
-              Share Shortlist ({selectedHotels.size}/5)
+              Share with Group ({selectedHotels.size}/5)
             </button>
           </div>
           {activeFilterChips.length > 0 && (
