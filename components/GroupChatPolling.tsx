@@ -240,7 +240,11 @@ export default function GroupChatPolling() {
         console.log('📢 [Notifications] Poll closed notification added:', poll.id);
         
         // Auto-collapse closed polls
-        setCollapsedPolls(prev => new Set([...prev, poll.id]));
+        setCollapsedPolls(prev => {
+          const next = new Set(prev);
+          next.add(poll.id);
+          return next;
+        });
         console.log('📋 [Poll] Auto-collapsed closed poll:', poll.id);
       }
     });
@@ -864,7 +868,13 @@ export default function GroupChatPolling() {
                     currentUserId={currentUserId || ''}
                     members={members}
                     timeRemaining={pollTimers[poll.id]}
-                    onClose={() => setCollapsedPolls(prev => new Set([...prev, poll.id]))}
+                    onClose={() =>
+                      setCollapsedPolls(prev => {
+                        const next = new Set(prev);
+                        next.add(poll.id);
+                        return next;
+                      })
+                    }
                   />
                 );
               })}

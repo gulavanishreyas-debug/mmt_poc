@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Find the trip
-    const trip = trips.get(tripId);
+    const trip = await trips.get(tripId);
     if (!trip) {
       return NextResponse.json(
         { error: 'Trip not found' },
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
       remainingMembers: trip.members.map(m => m.name)
     });
     
-    trips.set(tripId, trip);
+    await trips.set(tripId, trip);
 
     // Add system notification about member leaving
     const systemMessage = {
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
       trip.chatMessages = [];
     }
     trip.chatMessages.push(systemMessage);
-    trips.set(tripId, trip);
+    await trips.set(tripId, trip);
 
     // Calculate if discount is still unlocked
     const isDiscountUnlocked = trip.members.length >= trip.requiredMembers;
