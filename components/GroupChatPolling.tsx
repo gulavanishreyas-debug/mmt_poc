@@ -271,21 +271,41 @@ export default function GroupChatPolling() {
 
   // Load chat messages on mount
   useEffect(() => {
+    if (!tripId) return;
+    let isMounted = true;
+
     const loadChatMessages = async () => {
-      if (!tripId) return;
       console.log('💬 [Chat] Loading messages for trip:', tripId);
       try {
         const response = await fetch(`/api/social-cart/chat?tripId=${tripId}`);
         if (response.ok) {
           const data = await response.json();
-          console.log('✅ [Chat] Loaded', data.messages?.length || 0, 'messages');
-          setChatMessages(data.messages || []);
+          if (!isMounted) return;
+          const serverMessages = data.messages || [];
+          setChatMessages(prev => {
+            if (prev.length === serverMessages.length) {
+              const unchanged = prev.every((msg, idx) => msg.id === serverMessages[idx]?.id);
+              if (unchanged) {
+                return prev;
+              }
+            }
+            return serverMessages;
+          });
         }
       } catch (error) {
-        console.error('❌ [Chat] Load error:', error);
+        if (isMounted) {
+          console.error('❌ [Chat] Load error:', error);
+        }
       }
     };
+
     loadChatMessages();
+    const interval = setInterval(loadChatMessages, 5000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, [tripId]);
 
   // Listen for real-time chat messages
@@ -456,11 +476,23 @@ export default function GroupChatPolling() {
           message: messageInput.trim(),
         }),
       });
+
+      const payload = await response.json().catch(() => null);
+
       if (response.ok) {
         console.log('✅ [Chat] Message sent!');
         setMessageInput('');
+        if (payload?.message) {
+          setChatMessages(prev => {
+            if (prev.some(msg => msg.id === payload.message.id)) {
+              return prev;
+            }
+            return [...prev, payload.message];
+          });
+        }
       } else {
-        console.error('❌ [Chat] Send failed:', response.status);
+        console.error('❌ [Chat] Send failed:', response.status, payload?.error);
+        alert(payload?.error || 'Failed to send message');
       }
     } catch (error) {
       console.error('❌ [Chat] Send error:', error);
@@ -505,8 +537,13 @@ export default function GroupChatPolling() {
 
       const data = await response.json();
       console.log('✅ [GroupChatPolling] Vote recorded:', data);
-      
-      // Update will come via SSE - no need for local update to avoid race conditions
+
+      if (data.poll) {
+        updatePoll(data.poll);
+        if (data.poll.status === 'active') {
+          setActivePoll(data.poll);
+        }
+      }
     } catch (error) {
       console.error('❌ [GroupChatPolling] Failed to vote:', error);
       alert('Failed to record vote. Please try again.');
@@ -567,6 +604,13 @@ export default function GroupChatPolling() {
 
         const data = await response.json();
         console.log(`✅ [GroupChatPolling] Created ${config.type} poll`, data);
+
+        if (data.poll) {
+          addPoll(data.poll);
+          if (data.poll.status === 'active') {
+            setActivePoll(data.poll);
+          }
+        }
       }
 
       console.log('✅ [GroupChatPolling] All custom polls started');
@@ -599,8 +643,13 @@ export default function GroupChatPolling() {
 
       const data = await response.json();
       console.log('✅ [GroupChatPolling] Poll closed:', data);
-      
-      // Update will come via SSE - notification will be added by useEffect
+
+      if (data.poll) {
+        updatePoll(data.poll);
+        if (activePoll?.id === data.poll.id) {
+          setActivePoll(null);
+        }
+      }
     } catch (error) {
       console.error('❌ [GroupChatPolling] Failed to close poll:', error);
       alert('Failed to close poll. Please try again.');
@@ -629,9 +678,14 @@ export default function GroupChatPolling() {
           throw new Error(`Failed to close poll ${poll.id}`);
         }
 
+        const data = await response.json();
+        if (data.poll) {
+          updatePoll(data.poll);
+        }
         console.log(`✅ [GroupChatPolling] Closed poll: ${poll.id}`);
       }
       
+      setActivePoll(null);
       console.log('✅ [GroupChatPolling] All polls closed successfully');
     } catch (error) {
       console.error('❌ [GroupChatPolling] Failed to close all polls:', error);

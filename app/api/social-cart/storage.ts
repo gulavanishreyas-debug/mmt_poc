@@ -49,12 +49,15 @@ export interface Trip {
   members: Member[];
   polls?: Poll[];
   chatMessages?: ChatMessage[];
+  shortlistedHotels?: any[];
   linkExpiresAt?: string; // ISO timestamp when link expires
   linkValidityMinutes?: number; // Minutes until link expires (default 5)
   isLinkActive?: boolean; // Manual override to disable link
   hotelVotingStatus?: 'active' | 'closed';
   hotelVotingExpiresAt?: string; // ISO timestamp when voting expires
   selectedHotel?: any; // The winning hotel after voting
+  hotelBookingStatus?: 'pending' | 'confirmed' | null;
+  bookingConfirmation?: any;
 }
 
 // Store for Server-Sent Events connections (always in-memory per instance)

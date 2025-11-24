@@ -49,6 +49,13 @@ export async function GET(request: NextRequest) {
         currentMembers: trip.members.length,
         isLinkActive: trip.isLinkActive,
         linkExpiresAt: trip.linkExpiresAt,
+        polls: trip.polls || [],
+        shortlistedHotels: trip.shortlistedHotels || [],
+        selectedHotel: trip.selectedHotel || null,
+        hotelVotingStatus: trip.hotelVotingStatus || null,
+        hotelVotingExpiresAt: trip.hotelVotingExpiresAt || null,
+        hotelBookingStatus: trip.hotelBookingStatus || null,
+        bookingConfirmation: trip.bookingConfirmation || null,
       },
     });
   } catch (error: any) {

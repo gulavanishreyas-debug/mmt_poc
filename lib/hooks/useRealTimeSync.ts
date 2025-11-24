@@ -21,17 +21,43 @@ export function useRealTimeSync(tripId: string | null) {
           console.log(`🔄 [Polling] Response data:`, data);
           
           if (data.success && data.trip) {
+            const tripFromServer = data.trip;
             const currentMembers = useTripStore.getState().members;
-            const serverMembers = data.trip.members || [];
+            const serverMembers = tripFromServer.members || [];
             const currentStep = useTripStore.getState().currentStep;
             const isDiscountUnlocked = useTripStore.getState().isDiscountUnlocked;
+
+            // Sync poll state if SSE misses updates
+            const serverPolls = tripFromServer.polls || [];
+            const localPolls = useTripStore.getState().polls;
+            if (JSON.stringify(serverPolls) !== JSON.stringify(localPolls)) {
+              console.log('📊 [Polling] Syncing polls from server snapshot');
+              useTripStore.setState({ polls: serverPolls });
+              const activeServerPoll = serverPolls.find((poll: any) => poll.status === 'active') || null;
+              useTripStore.getState().setActivePoll(activeServerPoll || null);
+            }
+
+            // Sync hotel shortlist/voting state for safety
+            const serverHotels = tripFromServer.shortlistedHotels || [];
+            const localHotels = useTripStore.getState().shortlistedHotels;
+            if (JSON.stringify(serverHotels) !== JSON.stringify(localHotels)) {
+              console.log('🏨 [Polling] Syncing shortlisted hotels from server snapshot');
+              useTripStore.setState({ shortlistedHotels: serverHotels });
+            }
+            useTripStore.setState({
+              hotelVotingStatus: tripFromServer.hotelVotingStatus || null,
+              hotelVotingExpiresAt: tripFromServer.hotelVotingExpiresAt || null,
+              selectedHotel: tripFromServer.selectedHotel || null,
+              hotelBookingStatus: tripFromServer.hotelBookingStatus || null,
+              bookingConfirmation: tripFromServer.bookingConfirmation || null,
+            });
             
             console.log(`🔄 [Polling] Current state:`, {
               localMemberCount: currentMembers.length,
               localMembers: currentMembers.map(m => ({ id: m.id, name: m.name })),
               serverMemberCount: serverMembers.length,
               serverMembers: serverMembers.map((m: any) => ({ id: m.id, name: m.name })),
-              requiredMembers: data.trip.requiredMembers,
+              requiredMembers: tripFromServer.requiredMembers,
               currentStep,
               isDiscountUnlocked,
             });
@@ -59,7 +85,7 @@ export function useRealTimeSync(tripId: string | null) {
               
               // Check if discount should be unlocked
               const updatedMembers = useTripStore.getState().members;
-              const requiredMembers = data.trip.requiredMembers;
+              const requiredMembers = tripFromServer.requiredMembers;
               console.log(`🔍 [Polling] Checking discount: ${updatedMembers.length} >= ${requiredMembers}? Currently unlocked: ${useTripStore.getState().isDiscountUnlocked}`);
               
               if (updatedMembers.length >= requiredMembers && !useTripStore.getState().isDiscountUnlocked) {
