@@ -11,6 +11,15 @@ export interface Member {
   mobile?: string;
 }
 
+export interface MemberInput {
+  id?: string;
+  name: string;
+  avatar: string;
+  isAdmin: boolean;
+  mobile?: string;
+  joinedAt?: Date | string;
+}
+
 export interface PollVote {
   memberId: string;
   budget?: string;
@@ -105,7 +114,7 @@ export interface TripState {
   // Actions
   setTripDetails: (name: string, destination: string, purpose: TripPurpose, required: number) => void;
   createTrip: () => void;
-  addMember: (member: Omit<Member, 'id' | 'joinedAt'>) => void;
+  addMember: (member: MemberInput) => void;
   removeMember: (memberId: string) => void;
   setCurrentUser: (userId: string) => void;
   toggleTripHub: () => void;
@@ -176,16 +185,42 @@ export const useTripStore = create<TripState>((set, get) => ({
   },
   
   addMember: (member) => {
-    const newMember: Member = {
-      ...member,
-      id: `user${Math.random().toString(36).substr(2, 9)}`,
-      joinedAt: new Date(),
-    };
-    
-    const members = [...get().members, newMember];
-    const isDiscountUnlocked = members.length >= get().requiredMembers;
-    
-    set({ members, isDiscountUnlocked });
+    set((state) => {
+      const normalizedId = member.id ?? `user${Math.random().toString(36).substr(2, 9)}`;
+      const normalizedJoinedAt = member.joinedAt
+        ? new Date(member.joinedAt)
+        : new Date();
+      const normalizedMember: Member = {
+        id: normalizedId,
+        name: member.name,
+        avatar: member.avatar,
+        isAdmin: member.isAdmin,
+        mobile: member.mobile,
+        joinedAt: normalizedJoinedAt,
+      };
+
+      const existingIndex = state.members.findIndex(m => m.id === normalizedId);
+      if (existingIndex !== -1) {
+        const existing = state.members[existingIndex];
+        const needsUpdate = existing.name !== normalizedMember.name ||
+          existing.avatar !== normalizedMember.avatar ||
+          existing.isAdmin !== normalizedMember.isAdmin ||
+          existing.mobile !== normalizedMember.mobile;
+        if (!needsUpdate) {
+          return state;
+        }
+        const updatedMembers = state.members.slice();
+        updatedMembers[existingIndex] = { ...existing, ...normalizedMember };
+        return { ...state, members: updatedMembers };
+      }
+
+      const updatedMembers = [...state.members, normalizedMember];
+      return {
+        ...state,
+        members: updatedMembers,
+        isDiscountUnlocked: updatedMembers.length >= state.requiredMembers,
+      };
+    });
   },
   
   removeMember: (memberId) => {

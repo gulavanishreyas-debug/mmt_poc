@@ -73,10 +73,12 @@ export function useRealTimeSync(tripId: string | null) {
                 if (!exists) {
                   console.log(`👥 [Polling] Adding new member: ${serverMember.name} (${serverMember.id})`);
                   addMember({
+                    id: serverMember.id,
                     name: serverMember.name,
                     avatar: serverMember.avatar,
                     isAdmin: serverMember.isAdmin,
                     mobile: serverMember.mobile,
+                    joinedAt: serverMember.joinedAt,
                   });
                   addedCount++;
                 }
@@ -170,10 +172,12 @@ export function useRealTimeSync(tripId: string | null) {
               console.log(`👥 [SSE] Adding new member via SSE: ${member.name} (${member.id})`);
               // Add new member to store
               addMember({
+                id: member.id,
                 name: member.name,
                 avatar: member.avatar,
                 isAdmin: member.isAdmin,
                 mobile: member.mobile,
+                joinedAt: member.joinedAt,
               });
 
               // Show notification
