@@ -1395,13 +1395,28 @@ function PollCard({
     }
   }, [userVote, selectedOption, isMultiSelect]);
 
-  // Toggle multi-select option
-  const toggleOption = (optionId: string) => {
-    if (selectedOptions.includes(optionId)) {
-      setSelectedOptions(selectedOptions.filter(id => id !== optionId));
-    } else {
-      setSelectedOptions([...selectedOptions, optionId]);
-    }
+  useEffect(() => {
+    if (!isMultiSelect) return;
+    const userSelections = poll.options
+      .filter(opt => opt.votes.includes(currentUserId))
+      .map(opt => opt.id);
+    setSelectedOptions(userSelections);
+  }, [isMultiSelect, poll.options, currentUserId]);
+
+  const handleToggleOption = (optionId: string) => {
+    if (isClosed) return;
+    const isAlreadySelected = selectedOptions.includes(optionId);
+    const nextOptions = isAlreadySelected
+      ? selectedOptions.filter(id => id !== optionId)
+      : [...selectedOptions, optionId];
+    setSelectedOptions(nextOptions);
+    onVote(poll.id, nextOptions);
+  };
+
+  const handleSelectOption = (optionId: string) => {
+    if (isClosed) return;
+    setSelectedOption(optionId);
+    onVote(poll.id, optionId);
   };
   
   // Find most popular option
@@ -1465,7 +1480,7 @@ function PollCard({
             return (
               <button
                 key={option.id}
-                onClick={() => !isClosed && (isMultiSelect ? toggleOption(option.id) : setSelectedOption(option.id))}
+                onClick={() => isMultiSelect ? handleToggleOption(option.id) : handleSelectOption(option.id)}
                 disabled={isClosed}
                 className={`w-full text-left p-3 rounded-lg border transition-all flex items-center gap-3 ${
                   isClosed
@@ -1506,28 +1521,6 @@ function PollCard({
             );
           })}
         </div>
-
-        {/* Submit Button */}
-        {!isClosed && (
-          <button
-            onClick={() => {
-              if (isMultiSelect && selectedOptions.length > 0) {
-                // For multi-select, send all selected option IDs in one request
-                onVote(poll.id, selectedOptions);
-              } else if (selectedOption) {
-                onVote(poll.id, selectedOption);
-              }
-            }}
-            disabled={isMultiSelect ? selectedOptions.length === 0 : !selectedOption}
-            className={`w-full py-3 rounded-lg font-semibold transition-all ${
-              (isMultiSelect ? selectedOptions.length > 0 : selectedOption)
-                ? 'bg-[#0071c2] text-white hover:bg-[#005fa3]'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            }`}
-          >
-            Submit {isMultiSelect && selectedOptions.length > 0 && `(${selectedOptions.length} selected)`}
-          </button>
-        )}
 
         {/* Closed Badge */}
         {isClosed && (

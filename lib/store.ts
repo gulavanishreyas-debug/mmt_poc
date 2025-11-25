@@ -357,7 +357,11 @@ export const useTripStore = create<TripState>((set, get) => ({
   
   // New Poll Actions
   addPoll: (poll) => {
-    set((state) => ({ polls: [...state.polls, poll] }));
+    const existingPolls = get().polls;
+    if (existingPolls.some(p => p.id === poll.id)) {
+      return;
+    }
+    set({ polls: [...existingPolls, poll] });
   },
   
   updatePoll: (poll) => {
