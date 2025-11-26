@@ -1606,7 +1606,7 @@ const POLL_WIZARD_TEMPLATES = [
     title: 'Budget Range',
     description: 'Ask the group what price bracket they are comfortable paying for the trip.',
     defaultQuestion: "What's your preferred budget bracket for accommodations?",
-    defaultOptions: ['₹20,000 - ₹30,000', '₹30,000 - ₹40,000', '₹40,000 - ₹60,000', '₹60,000+'],
+    defaultOptions: ['₹5,000 - ₹7,000', '₹7,000 - ₹12,000', '₹12,000 - ₹18,000', '₹18,000+'],
   },
   {
     type: 'dates' as const,
