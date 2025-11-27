@@ -63,7 +63,9 @@ export async function POST(request: NextRequest) {
 
     await setLink(linkId, shareableLink);
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    const requestUrl = new URL(request.url);
+    const envBaseUrl = process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/$/, '');
+    const baseUrl = envBaseUrl || `${requestUrl.protocol}//${requestUrl.host}`;
     const shareUrl = `${baseUrl}/r/${linkId}`;
 
     console.log('✅ [API/share/create/POST] Link created:', shareUrl);
