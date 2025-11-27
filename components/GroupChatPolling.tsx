@@ -955,11 +955,11 @@ export default function GroupChatPolling() {
                       </div>
                       {isAdmin && (
                         <button
-                          onClick={() => useTripStore.setState({ currentStep: 'guest-payment' })}
+                          onClick={() => useTripStore.setState({ currentStep: 'room-selection' })}
                           className="w-full px-4 py-3 bg-white text-purple-600 rounded-lg font-semibold hover:bg-purple-50 transition-all flex items-center justify-center gap-2"
                         >
                           <span>🏨</span>
-                          Proceed to Guest Info & Payment
+                          Select Room & Proceed to Booking
                         </button>
                       )}
                     </div>

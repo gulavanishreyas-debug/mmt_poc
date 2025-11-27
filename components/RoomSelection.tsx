@@ -44,25 +44,32 @@ const ROOM_TYPES: RoomType[] = [
 ];
 
 export default function RoomSelection() {
-  const { setStep } = useTripStore();
+  const { setStep, selectedHotel: storeSelectedHotel, destination: tripDestination } = useTripStore();
   
   // Get URL parameters for shared link mode
   const [urlParams, setUrlParams] = useState<URLSearchParams | null>(null);
-  const [hotel, setHotel] = useState<any>(null);
-  
+  const [hotel, setHotel] = useState<any>(storeSelectedHotel || null);
+
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      setUrlParams(params);
-      
-      // Get hotel from URL params or store
-      const hotelId = params.get('hotelId');
-      if (hotelId) {
-        const foundHotel = AVAILABLE_HOTELS.find((h: any) => h.id === hotelId);
-        setHotel(foundHotel);
-      }
-    }
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    setUrlParams(params);
   }, []);
+
+  useEffect(() => {
+    if (!urlParams && !storeSelectedHotel) return;
+
+    const hotelId = urlParams?.get('hotelId');
+    if (hotelId) {
+      const foundHotel = AVAILABLE_HOTELS.find((h: any) => h.id === hotelId);
+      setHotel(foundHotel || storeSelectedHotel || null);
+      return;
+    }
+
+    if (storeSelectedHotel) {
+      setHotel(storeSelectedHotel);
+    }
+  }, [urlParams, storeSelectedHotel]);
   
   // State for room selection
   const [selectedRoomType, setSelectedRoomType] = useState<string>('standard');
@@ -74,6 +81,18 @@ export default function RoomSelection() {
   
   // Initialize dates from URL params or defaults
   useEffect(() => {
+    if (!urlParams && typeof window !== 'undefined') {
+      // Initialize defaults even if there are no URL params
+      const defaultCheckIn = new Date();
+      defaultCheckIn.setDate(defaultCheckIn.getDate() + 7);
+      setCheckInDate(defaultCheckIn.toISOString().split('T')[0]);
+
+      const defaultCheckOut = new Date(defaultCheckIn);
+      defaultCheckOut.setDate(defaultCheckOut.getDate() + 3);
+      setCheckOutDate(defaultCheckOut.toISOString().split('T')[0]);
+      return;
+    }
+
     if (urlParams) {
       const checkIn = urlParams.get('checkIn');
       const checkOut = urlParams.get('checkOut');
@@ -81,17 +100,17 @@ export default function RoomSelection() {
       const childrenParam = urlParams.get('children');
       const roomsParam = urlParams.get('rooms');
       
-      if (checkIn) setCheckInDate(checkIn);
-      else {
-        // Default: 7 days from today
+      if (checkIn) {
+        setCheckInDate(checkIn);
+      } else {
         const defaultCheckIn = new Date();
         defaultCheckIn.setDate(defaultCheckIn.getDate() + 7);
         setCheckInDate(defaultCheckIn.toISOString().split('T')[0]);
       }
       
-      if (checkOut) setCheckOutDate(checkOut);
-      else {
-        // Default: 10 days from today (3 nights)
+      if (checkOut) {
+        setCheckOutDate(checkOut);
+      } else {
         const defaultCheckOut = new Date();
         defaultCheckOut.setDate(defaultCheckOut.getDate() + 10);
         setCheckOutDate(defaultCheckOut.toISOString().split('T')[0]);
@@ -127,24 +146,33 @@ export default function RoomSelection() {
     }
     
     // Store selection in URL params for GuestPaymentScreen
-    const params = new URLSearchParams(window.location.search);
+    const params = typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search)
+      : new URLSearchParams();
     params.set('roomType', selectedRoomType);
     params.set('checkIn', checkInDate);
     params.set('checkOut', checkOutDate);
     params.set('adults', adults.toString());
     params.set('children', children.toString());
     params.set('rooms', rooms.toString());
+    if (hotel?.location || tripDestination) {
+      params.set('destination', hotel?.location || tripDestination || '');
+    }
     
     // Navigate to guest payment with params
-    window.history.pushState({}, '', `?${params.toString()}`);
+    if (typeof window !== 'undefined') {
+      window.history.pushState({}, '', `?${params.toString()}`);
+    }
     setStep('guest-payment');
   };
   
   const handleChangeHotel = () => {
     // Navigate back to hotel selection with current hotel pre-selected
-    const params = new URLSearchParams(window.location.search);
-    params.set('step', 'hotels');
-    window.history.pushState({}, '', `?${params.toString()}`);
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      params.set('step', 'hotels');
+      window.history.pushState({}, '', `?${params.toString()}`);
+    }
     setStep('hotels');
   };
   

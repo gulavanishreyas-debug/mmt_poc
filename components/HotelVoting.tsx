@@ -189,7 +189,7 @@ export default function HotelVoting() {
 
     // If voting already closed, just navigate admin back to guest payment
     if (hotelVotingStatus === 'closed') {
-      setStep('guest-payment');
+      setStep('room-selection');
       return;
     }
 
@@ -216,10 +216,10 @@ export default function HotelVoting() {
       });
 
       triggerConfetti();
-      setStep('guest-payment');
+      setStep('room-selection');
     } catch (error) {
       console.error('❌ [HotelVoting] Failed to close voting:', error);
-      alert('Failed to proceed to guest payment. Please try again.');
+      alert('Failed to proceed to room selection. Please try again.');
     }
   };
 
