@@ -15,8 +15,13 @@ export default function MyBookings() {
   useEffect(() => {
     if (!currentUserId) return;
 
-    setLoading(true);
-    loadMyBookings(currentUserId).finally(() => setLoading(false));
+    const loadBookings = async () => {
+      setLoading(true);
+      await loadMyBookings(currentUserId);
+      setLoading(false);
+    };
+
+    loadBookings();
   }, [currentUserId, loadMyBookings]);
 
   const filteredBookings = myBookings.filter(booking => {
