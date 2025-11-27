@@ -45,9 +45,14 @@ export default function HotelFlow() {
         setPrefillParams(prefill);
         setShowPrefillBanner(true);
         console.log('🔗 [HotelFlow] Detected prefill parameters:', prefill);
+        
+        // If viewing from shared link (no tripId), treat as standalone browsing
+        if (!tripId && prefill.fromLink) {
+          console.log('🔗 [HotelFlow] Shared link mode - enabling standalone browsing');
+        }
       }
     }
-  }, []);
+  }, [tripId]);
 
   const handleResetHotelSelection = () => {
     if (hotelVotingStatus === 'closed') {
@@ -105,8 +110,11 @@ export default function HotelFlow() {
     }
   };
 
-  // Admin sees hotel selection first
-  if (isAdmin && shortlistedHotels.length === 0 && !hasSharedShortlist) {
+  // Shared link mode - Show hotels in browsing mode (no trip needed)
+  const isSharedLinkMode = !tripId && prefillParams.fromLink && prefillParams.destination;
+
+  // Admin sees hotel selection first, OR shared link mode
+  if ((isAdmin && shortlistedHotels.length === 0 && !hasSharedShortlist) || isSharedLinkMode) {
     return (
       <>
         {showPrefillBanner && prefillParams.destination && (
@@ -119,7 +127,7 @@ export default function HotelFlow() {
               <span className="text-2xl">🔗</span>
               <div>
                 <p className="font-semibold text-blue-900">
-                  Prefilled from shared link
+                  {isSharedLinkMode ? 'Viewing shared itinerary' : 'Prefilled from shared link'}
                 </p>
                 <p className="text-sm text-blue-700">
                   Showing hotels for {prefillParams.destination}
@@ -139,6 +147,7 @@ export default function HotelFlow() {
           destination={prefillParams.destination || destination} 
           onShareShortlist={handleShareShortlist}
           prefillHotelId={prefillParams.hotelId}
+          isSharedLinkMode={isSharedLinkMode}
         />
       </>
     );

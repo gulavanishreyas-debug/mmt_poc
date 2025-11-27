@@ -161,7 +161,7 @@ interface HotelConsensusEntry {
   percentage: number;
 }
 
-const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
+export const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   // Comfort tier ₹5k – ₹7k
   createHotel({
     id: 'comfort-01',
@@ -907,11 +907,13 @@ interface HotelSelectionProps {
   destination: string;
   onShareShortlist: (hotels: Hotel[]) => void;
   prefillHotelId?: string;
+  isSharedLinkMode?: boolean;
 }
 
-export default function HotelSelection({ destination, onShareShortlist, prefillHotelId }: HotelSelectionProps) {
+export default function HotelSelection({ destination, onShareShortlist, prefillHotelId, isSharedLinkMode = false }: HotelSelectionProps) {
   const polls = useTripStore((state) => state.polls);
   const shortlistedHotels = useTripStore((state) => state.shortlistedHotels);
+  const setStep = useTripStore((state) => state.setStep);
   const [selectedHotels, setSelectedHotels] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState<'popular' | 'price-low' | 'price-high' | 'rating'>('popular');
   const [checkIn, setCheckIn] = useState('');
@@ -923,7 +925,10 @@ export default function HotelSelection({ destination, onShareShortlist, prefillH
 
   // Handle prefill from shared link
   useEffect(() => {
-    if (prefillHotelId) {
+    if (isSharedLinkMode) {
+      setBannerMessage('🔗 Viewing shared booking itinerary—Create your own trip to book!');
+      console.log('🔗 [HotelSelection] Shared link mode active');
+    } else if (prefillHotelId) {
       const prefillHotel = AVAILABLE_HOTELS.find(h => h.id === prefillHotelId);
       if (prefillHotel) {
         setSelectedHotels(new Set([prefillHotelId]));
@@ -936,7 +941,7 @@ export default function HotelSelection({ destination, onShareShortlist, prefillH
         console.log('⚠️ [HotelSelection] Prefilled hotel not found:', prefillHotelId);
       }
     }
-  }, [prefillHotelId]);
+  }, [prefillHotelId, isSharedLinkMode]);
   const [showBanner, setShowBanner] = useState(false);
   const [isFiltering, setIsFiltering] = useState(false);
 
@@ -1165,6 +1170,15 @@ export default function HotelSelection({ destination, onShareShortlist, prefillH
     setSelectedHotels(newSelected);
   };
 
+  const handleBookHotel = (hotelId: string) => {
+    // In shared link mode, directly navigate to room selection with the hotel
+    const params = new URLSearchParams(window.location.search);
+    params.set('step', 'room-selection');
+    params.set('hotelId', hotelId);
+    window.history.pushState({}, '', `?${params.toString()}`);
+    setStep('room-selection');
+  };
+
   const handleShareShortlist = () => {
     if (selectedHotels.size === 0) {
       alert('Please select at least one hotel');
@@ -1191,17 +1205,19 @@ export default function HotelSelection({ destination, onShareShortlist, prefillH
                 {isFiltering ? 'Applying filters…' : `${filteredHotels.length} options match your filters.`}
               </p>
             </div>
-            <button
-              onClick={handleShareShortlist}
-              disabled={selectedHotels.size === 0}
-              className={`px-6 py-3 rounded-lg font-semibold transition-all ${
-                selectedHotels.size > 0
-                  ? 'bg-gradient-to-r from-[#0071c2] to-purple-600 text-white hover:from-[#005fa3] hover:to-purple-700 shadow-lg'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              }`}
-            >
-              Share with Group ({selectedHotels.size}/5)
-            </button>
+            {!isSharedLinkMode && (
+              <button
+                onClick={handleShareShortlist}
+                disabled={selectedHotels.size === 0}
+                className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+                  selectedHotels.size > 0
+                    ? 'bg-gradient-to-r from-[#0071c2] to-purple-600 text-white hover:from-[#005fa3] hover:to-purple-700 shadow-lg'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
+              >
+                Share with Group ({selectedHotels.size}/5)
+              </button>
+            )}
           </div>
           {activeFilterChips.length > 0 && (
             <div className="flex flex-wrap items-center gap-2 text-xs text-gray-700">
@@ -1248,9 +1264,19 @@ export default function HotelSelection({ destination, onShareShortlist, prefillH
         <div className="max-w-7xl mx-auto px-4 mt-4" role="status" aria-live="polite">
           <div className="flex items-center justify-between bg-blue-50 border border-blue-200 text-blue-900 rounded-lg px-4 py-2 shadow-sm">
             <p className="text-sm font-medium">{bannerMessage}</p>
-            <button onClick={() => setShowBanner(false)} aria-label="Dismiss banner">
-              <X className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-2">
+              {isSharedLinkMode && (
+                <button
+                  onClick={() => setStep('home')}
+                  className="px-4 py-1.5 bg-gradient-to-r from-[#0071c2] to-purple-600 text-white text-sm font-semibold rounded-lg hover:from-[#005fa3] hover:to-purple-700 transition-all"
+                >
+                  Create Your Trip
+                </button>
+              )}
+              <button onClick={() => setShowBanner(false)} aria-label="Dismiss banner">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1438,14 +1464,16 @@ export default function HotelSelection({ destination, onShareShortlist, prefillH
                               </div>
                             </div>
                             <button
-                              onClick={() => toggleHotel(hotel.id)}
+                              onClick={() => isSharedLinkMode ? handleBookHotel(hotel.id) : toggleHotel(hotel.id)}
                               className={`px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2 ${
-                                isSelected
+                                isSelected && !isSharedLinkMode
                                   ? 'bg-green-500 text-white hover:bg-green-600'
                                   : 'bg-[#0071c2] text-white hover:bg-[#005fa3]'
                               }`}
                             >
-                              {isSelected ? (
+                              {isSharedLinkMode ? (
+                                'Book This Hotel'
+                              ) : isSelected ? (
                                 <>
                                   <Check className="w-4 h-4" />
                                   Selected

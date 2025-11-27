@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { ArrowLeft, MapPin, Calendar, Users, IndianRupee, Share2, Download, RefreshCw, Phone, Mail } from 'lucide-react';
+import { ArrowLeft, MapPin, Calendar, Users, IndianRupee, Share2, Download, RefreshCw, Phone, Mail, User } from 'lucide-react';
 import { useTripStore } from '@/lib/store';
 import { useState } from 'react';
 
@@ -228,8 +228,50 @@ export default function BookingDetails() {
                     <span className="font-mono">{booking.paymentRef}</span>
                   </div>
                 )}
+                {booking.paymentMethod && (
+                  <div className="flex justify-between text-sm text-gray-600">
+                    <span>Payment Method</span>
+                    <span className="font-semibold capitalize">{booking.paymentMethod}</span>
+                  </div>
+                )}
               </div>
             </div>
+
+            {/* Guest Information */}
+            {(booking.guestName || booking.guestEmail || booking.guestPhone) && (
+              <div className="bg-blue-50 rounded-xl p-6 mb-6">
+                <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <User className="w-5 h-5" />
+                  Guest Information
+                </h3>
+                <div className="space-y-2 text-sm">
+                  {booking.guestName && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Name</span>
+                      <span className="font-semibold">{booking.guestName}</span>
+                    </div>
+                  )}
+                  {booking.guestEmail && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Email</span>
+                      <span className="font-semibold">{booking.guestEmail}</span>
+                    </div>
+                  )}
+                  {booking.guestPhone && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Phone</span>
+                      <span className="font-semibold">{booking.guestPhone}</span>
+                    </div>
+                  )}
+                  {booking.specialRequests && (
+                    <div className="pt-2 border-t border-blue-200">
+                      <span className="text-gray-600 block mb-1">Special Requests</span>
+                      <span className="font-semibold">{booking.specialRequests}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Action Buttons */}
             <div className="grid md:grid-cols-2 gap-4 mb-6">

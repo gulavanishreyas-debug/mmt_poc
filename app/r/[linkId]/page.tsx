@@ -37,8 +37,9 @@ export default function DeepLinkResolver() {
         const data = await res.json();
         setLinkData(data);
 
-        // Redirect to hotel selection with prefilled data
+        // Redirect to room selection page with hotel prefill parameters
         const params = new URLSearchParams({
+          step: 'room-selection',
           destination: data.destination,
           hotelId: data.hotelId,
           checkIn: data.checkIn,
@@ -49,7 +50,7 @@ export default function DeepLinkResolver() {
           fromLink: linkId,
         });
 
-        router.push(`/hotels?${params.toString()}`);
+        router.push(`/?${params.toString()}`);
       })
       .catch(() => {
         setStatus('error');

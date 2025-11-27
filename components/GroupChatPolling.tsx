@@ -955,11 +955,11 @@ export default function GroupChatPolling() {
                       </div>
                       {isAdmin && (
                         <button
-                          onClick={() => useTripStore.setState({ currentStep: 'booking' })}
+                          onClick={() => useTripStore.setState({ currentStep: 'guest-payment' })}
                           className="w-full px-4 py-3 bg-white text-purple-600 rounded-lg font-semibold hover:bg-purple-50 transition-all flex items-center justify-center gap-2"
                         >
                           <span>🏨</span>
-                          Proceed to Room Selection & Booking
+                          Proceed to Guest Info & Payment
                         </button>
                       )}
                     </div>
@@ -1802,23 +1802,14 @@ function PollWizardModal({
 
 // Hotel Voting Card Component
 function HotelVotingCard({ hotel, currentUserId, tripId, votingClosed }: { hotel: any; currentUserId: string; tripId: string; votingClosed: boolean }) {
-  const [commentModalOpen, setCommentModalOpen] = useState(false);
-  const [selectedVote, setSelectedVote] = useState<'love' | 'dislike' | null>(null);
-  const [commentText, setCommentText] = useState('');
-
   const userVote = hotel.votes[currentUserId];
 
   console.log('🏨 [HotelVotingCard] Rendering for user:', currentUserId, 'userVote:', userVote?.vote, 'votingClosed:', votingClosed);
 
-  const handleVoteClick = (vote: 'love' | 'dislike') => {
-    if (votingClosed) return; // Prevent voting if closed
-    setSelectedVote(vote);
-    setCommentModalOpen(true);
-  };
+  const handleVoteClick = async () => {
+    if (votingClosed || !currentUserId) return; // Prevent voting if closed or user missing
+    const nextVote: 'love' | 'dislike' = userVote?.vote === 'love' ? 'dislike' : 'love';
 
-  const handleSubmitVote = async () => {
-    if (!selectedVote) return;
-    
     try {
       const response = await fetch('/api/social-cart/hotels/vote', {
         method: 'POST',
@@ -1826,8 +1817,7 @@ function HotelVotingCard({ hotel, currentUserId, tripId, votingClosed }: { hotel
         body: JSON.stringify({
           tripId,
           hotelId: hotel.id,
-          vote: selectedVote,
-          comment: commentText || undefined,
+          vote: nextVote,
           userId: currentUserId,
         }),
       });
@@ -1835,10 +1825,6 @@ function HotelVotingCard({ hotel, currentUserId, tripId, votingClosed }: { hotel
       if (!response.ok) {
         throw new Error('Failed to submit vote');
       }
-
-      setCommentModalOpen(false);
-      setSelectedVote(null);
-      setCommentText('');
     } catch (error) {
       console.error('Failed to submit vote:', error);
       alert('Failed to submit vote. Please try again.');
@@ -1898,7 +1884,7 @@ function HotelVotingCard({ hotel, currentUserId, tripId, votingClosed }: { hotel
           {/* Like Button - User's Vote Only */}
           <div className="mb-3">
             <motion.button
-              onClick={() => handleVoteClick('love')}
+              onClick={handleVoteClick}
               disabled={votingClosed}
               className={`w-full py-3 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all ${
                 userVote?.vote === 'love'
@@ -1933,89 +1919,6 @@ function HotelVotingCard({ hotel, currentUserId, tripId, votingClosed }: { hotel
         </div>
       </motion.div>
 
-      {/* Comment Modal */}
-      <AnimatePresence>
-        {commentModalOpen && selectedVote && (
-          <>
-            <motion.div
-              className="fixed inset-0 bg-black/50 z-50"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setCommentModalOpen(false)}
-            />
-            
-            <motion.div
-              className="fixed inset-0 z-50 flex items-center justify-center p-4"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-            >
-              <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl ${
-                      selectedVote === 'love' ? 'bg-green-100' : 'bg-red-100'
-                    }`}>
-                      {selectedVote === 'love' ? '👍' : '👎'}
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold text-gray-900">
-                        {selectedVote === 'love' ? 'Love this hotel!' : 'Not a fan?'}
-                      </h3>
-                      <p className="text-sm text-gray-600">Tell your friends why</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setCommentModalOpen(false)}
-                    className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center"
-                  >
-                    <X className="w-5 h-5 text-gray-500" />
-                  </button>
-                </div>
-                
-                <div className="mb-6">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Add a comment (optional)
-                  </label>
-                  <textarea
-                    value={commentText}
-                    onChange={(e) => setCommentText(e.target.value)}
-                    placeholder={selectedVote === 'love' 
-                      ? "E.g., 'Close to the beach and within our budget!'" 
-                      : "E.g., 'Too expensive for what it offers'"}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-[#0071c2] focus:outline-none resize-none"
-                    rows={4}
-                    maxLength={200}
-                  />
-                  <p className="text-xs text-gray-500 mt-1 text-right">
-                    {commentText.length}/200 characters
-                  </p>
-                </div>
-                
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => setCommentModalOpen(false)}
-                    className="flex-1 px-4 py-3 rounded-xl font-semibold border-2 border-gray-300 text-gray-700 hover:bg-gray-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSubmitVote}
-                    className={`flex-1 px-4 py-3 rounded-xl font-semibold text-white ${
-                      selectedVote === 'love'
-                        ? 'bg-green-500 hover:bg-green-600'
-                        : 'bg-red-500 hover:bg-red-600'
-                    }`}
-                  >
-                    Submit Vote
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
     </>
   );
 }

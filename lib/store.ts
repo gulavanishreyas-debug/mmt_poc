@@ -104,6 +104,13 @@ export interface CompletedBooking {
   // Payment
   paymentStatus: 'Success' | 'Failed' | 'Pending';
   paymentRef?: string;
+  paymentMethod?: 'card' | 'upi' | 'netbanking';
+  
+  // Guest information
+  guestName?: string;
+  guestEmail?: string;
+  guestPhone?: string;
+  specialRequests?: string;
   
   // Metadata
   createdAt: string;
@@ -212,7 +219,7 @@ export interface TripState {
   
   // UI State
   showTripHub: boolean;
-  currentStep: 'home' | 'create' | 'invite' | 'hub' | 'poll' | 'hotels' | 'booking' | 'success' | 'mybookings' | 'booking-details';
+  currentStep: 'home' | 'create' | 'invite' | 'hub' | 'poll' | 'hotels' | 'room-selection' | 'guest-payment' | 'mybookings' | 'booking-details';
   
   // Actions
   setTripDetails: (name: string, destination: string, purpose: TripPurpose, required: number) => void;

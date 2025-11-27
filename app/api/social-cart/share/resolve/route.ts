@@ -64,13 +64,23 @@ export async function GET(request: NextRequest) {
 
     console.log('✅ [API/share/resolve/GET] Link resolved successfully');
 
+    // Convert dates to yyyy-MM-dd format for date inputs
+    const formatDate = (dateStr: string) => {
+      try {
+        const date = new Date(dateStr);
+        return date.toISOString().split('T')[0];
+      } catch {
+        return dateStr;
+      }
+    };
+
     return NextResponse.json({
       linkId: link.linkId,
       destination: link.destination,
       hotelId: link.hotelId,
       hotelName: link.hotelName,
-      checkIn: link.checkIn,
-      checkOut: link.checkOut,
+      checkIn: formatDate(link.checkIn),
+      checkOut: formatDate(link.checkOut),
       guests: link.guests,
       discountSummary: link.discountSummary,
     });

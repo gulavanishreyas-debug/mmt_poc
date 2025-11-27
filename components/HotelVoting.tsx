@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ThumbsUp, ThumbsDown, Star, Wifi, Coffee, Dumbbell, Waves, MessageSquare, X } from 'lucide-react';
+import { useEffect, useMemo } from 'react';
+import { motion } from 'framer-motion';
+import { ThumbsUp, Star, Wifi, Coffee, Dumbbell, Waves, MessageSquare } from 'lucide-react';
 import { useTripStore, Hotel, HotelVote } from '@/lib/store';
 import { triggerConfetti } from '@/lib/confetti';
 
@@ -90,10 +90,6 @@ export default function HotelVoting() {
     }
   }, []);
 
-  const [commentModalOpen, setCommentModalOpen] = useState(false);
-  const [selectedHotelForComment, setSelectedHotelForComment] = useState<{ id: string; vote: 'love' | 'dislike' } | null>(null);
-  const [commentText, setCommentText] = useState('');
-
   const canVote = hotelVotingStatus !== 'closed';
 
   const hotelConsensus = useMemo(() => {
@@ -129,24 +125,15 @@ export default function HotelVoting() {
     return hotel.votes[currentUserId];
   };
 
-  const handleVoteClick = (hotelId: string) => {
-    if (!canVote) {
+  const handleVoteClick = async (hotelId: string) => {
+    if (!canVote || !currentUserId) {
       return;
     }
+
     const targetHotel = shortlistedHotels.find((hotel) => hotel.id === hotelId);
     const existingVote = getUserVote(targetHotel);
     const vote: 'love' | 'dislike' = existingVote?.vote === 'love' ? 'dislike' : 'love';
-    setSelectedHotelForComment({ id: hotelId, vote });
-    setCommentModalOpen(true);
-  };
 
-  const handleSubmitVote = async () => {
-    if (!selectedHotelForComment || !currentUserId) return;
-    if (!canVote) {
-      setCommentModalOpen(false);
-      return;
-    }
-    
     try {
       const { tripId } = useTripStore.getState();
       
@@ -156,9 +143,8 @@ export default function HotelVoting() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tripId,
-          hotelId: selectedHotelForComment.id,
-          vote: selectedHotelForComment.vote,
-          comment: commentText || undefined,
+          hotelId,
+          vote,
           userId: currentUserId,
         }),
       });
@@ -168,10 +154,6 @@ export default function HotelVoting() {
       }
 
       console.log('✅ [HotelVoting] Vote submitted successfully');
-      
-      setCommentModalOpen(false);
-      setSelectedHotelForComment(null);
-      setCommentText('');
     } catch (error) {
       console.error('❌ [HotelVoting] Failed to submit vote:', error);
       alert('Failed to submit vote. Please try again.');
@@ -205,14 +187,14 @@ export default function HotelVoting() {
   const handleProceedToBook = async () => {
     if (!tripId || !isAdmin) return;
 
-    // If voting already closed, just navigate admin back to booking
+    // If voting already closed, just navigate admin back to guest payment
     if (hotelVotingStatus === 'closed') {
-      setStep('booking');
+      setStep('guest-payment');
       return;
     }
 
     try {
-      console.log('📋 [HotelVoting] Admin closing voting and proceeding to booking...');
+      console.log('📋 [HotelVoting] Admin closing voting and proceeding to guest payment...');
 
       const response = await fetch('/api/social-cart/hotels/close-voting', {
         method: 'POST',
@@ -234,10 +216,10 @@ export default function HotelVoting() {
       });
 
       triggerConfetti();
-      setStep('booking');
+      setStep('guest-payment');
     } catch (error) {
       console.error('❌ [HotelVoting] Failed to close voting:', error);
-      alert('Failed to proceed to booking. Please try again.');
+      alert('Failed to proceed to guest payment. Please try again.');
     }
   };
 
@@ -523,98 +505,6 @@ export default function HotelVoting() {
         </motion.div>
       </div>
       
-      {/* Comment Modal */}
-      <AnimatePresence>
-        {commentModalOpen && selectedHotelForComment && (
-          <>
-            {/* Backdrop */}
-            <motion.div
-              className="fixed inset-0 bg-black/50 z-50"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setCommentModalOpen(false)}
-            />
-            
-            {/* Modal */}
-            <motion.div
-              className="fixed inset-0 z-50 flex items-center justify-center p-4"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-            >
-              <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
-                {/* Header */}
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                      selectedHotelForComment.vote === 'love' ? 'bg-green-100' : 'bg-red-100'
-                    }`}>
-                      {selectedHotelForComment.vote === 'love' ? (
-                        <ThumbsUp className="w-6 h-6 text-green-600" />
-                      ) : (
-                        <ThumbsDown className="w-6 h-6 text-red-600" />
-                      )}
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold text-gray-900">
-                        {selectedHotelForComment.vote === 'love' ? 'Love this hotel!' : 'Not a fan?'}
-                      </h3>
-                      <p className="text-sm text-gray-600">Tell your friends why</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setCommentModalOpen(false)}
-                    className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors"
-                  >
-                    <X className="w-5 h-5 text-gray-500" />
-                  </button>
-                </div>
-                
-                {/* Comment Input */}
-                <div className="mb-6">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Add a comment (optional)
-                  </label>
-                  <textarea
-                    value={commentText}
-                    onChange={(e) => setCommentText(e.target.value)}
-                    placeholder={selectedHotelForComment.vote === 'love' 
-                      ? "E.g., 'Close to the beach and within our budget!'" 
-                      : "E.g., 'Too expensive for what it offers'"}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-[#0071c2] focus:outline-none resize-none"
-                    rows={4}
-                    maxLength={200}
-                  />
-                  <p className="text-xs text-gray-500 mt-1 text-right">
-                    {commentText.length}/200 characters
-                  </p>
-                </div>
-                
-                {/* Actions */}
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => setCommentModalOpen(false)}
-                    className="flex-1 px-4 py-3 rounded-xl font-semibold border-2 border-gray-300 text-gray-700 hover:bg-gray-50 transition-all"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSubmitVote}
-                    className={`flex-1 px-4 py-3 rounded-xl font-semibold text-white transition-all ${
-                      selectedHotelForComment.vote === 'love'
-                        ? 'bg-green-500 hover:bg-green-600'
-                        : 'bg-red-500 hover:bg-red-600'
-                    }`}
-                  >
-                    Submit Vote
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
