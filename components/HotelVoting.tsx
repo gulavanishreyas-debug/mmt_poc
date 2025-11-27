@@ -22,6 +22,9 @@ export default function HotelVoting() {
     bookingConfirmation,
   } = useTripStore();
 
+  // Declare isAdmin here so it's available for all render logic
+  const isAdmin = members.find(m => m.id === currentUserId)?.isAdmin;
+
   useEffect(() => {
     // Mock hotel data - Admin would have shortlisted these
     if (shortlistedHotels.length === 0) {
@@ -237,8 +240,6 @@ export default function HotelVoting() {
       alert('Failed to proceed to booking. Please try again.');
     }
   };
-
-  const isAdmin = members.find(m => m.id === currentUserId)?.isAdmin;
 
   const amenityIcons: { [key: string]: any } = {
     pool: Waves,
@@ -467,19 +468,17 @@ export default function HotelVoting() {
             <h3 className="text-xl font-bold mb-2">
               {hotelVotingStatus === 'closed' ? 'Ready to finalize booking?' : 'Ready to proceed?'}
             </h3>
-            <p className="mb-4">
+            <p className="mb-6">
               {hotelVotingStatus === 'closed'
                 ? 'Only you (the admin) will move to the booking screen. Everyone else will stay here until you finish.'
                 : 'Lock the winning hotel and move to the booking screen just for you.'}
             </p>
-            <motion.button
+            <button
               onClick={handleProceedToBook}
-              className="bg-white text-mmt-blue px-8 py-3 rounded-full font-bold"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+              className="inline-block bg-white text-[#0071c2] px-12 py-4 rounded-full font-bold text-lg hover:bg-gray-100 transition-all duration-200 cursor-pointer"
             >
-              {hotelVotingStatus === 'closed' ? 'Open Booking Page' : 'Close Voting & Proceed →'}
-            </motion.button>
+              {hotelVotingStatus === 'closed' ? '📖 Open Booking Page' : '🔒 Close Voting & Proceed'}
+            </button>
           </motion.div>
         )}
 

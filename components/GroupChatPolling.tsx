@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, CheckCircle, Users, Calendar, DollarSign, Sparkles, TrendingUp, BarChart3, MapPin, Star, X, MessageSquare, ChevronDown, ChevronUp } from 'lucide-react';
 import { useTripStore } from '@/lib/store';
+import Header from './Header';
 
 interface Poll {
   id: string;
@@ -500,11 +501,11 @@ export default function GroupChatPolling() {
     }
   };
 
-  // Auto-scroll to bottom
-  useEffect(() => {
-    pollsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [polls, notifications, chatMessages]);
+  // Auto-scroll disabled to prevent irritating behavior
+  // useEffect(() => {
+  //   pollsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  //   chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  // }, [polls, notifications, chatMessages]);
 
   const handleVote = async (pollId: string, optionId: string | string[]) => {
     if (!currentUserId) return;
@@ -751,38 +752,10 @@ export default function GroupChatPolling() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
-      {/* MakeMyTrip Header */}
-      <div className="bg-[#0071c2] px-6 py-4 shadow-md">
-        <div className="flex items-center justify-between max-w-7xl mx-auto">
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2">
-              <span className="text-white text-2xl font-normal">make</span>
-              <span className="bg-red-600 text-white px-2 py-1 text-xl font-bold italic rounded">my</span>
-              <span className="text-white text-2xl font-normal">trip</span>
-            </div>
-            
-            {/* Personalized Greeting */}
-            {currentUser && (
-              <div className="text-white">
-                <span className="text-lg">Hello, </span>
-                <span className="text-lg font-semibold">{currentUser.name}</span>
-                {currentUser.isAdmin && (
-                  <span className="ml-2 text-xs bg-white/20 px-2 py-1 rounded">Admin</span>
-                )}
-              </div>
-            )}
-          </div>
-          
-          {/* Promotional Banner */}
-          <div className="bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2">
-            <div>
-              <div className="text-sm font-semibold">₹200+ off on your booking</div>
-              <div className="text-xs opacity-90">Limited time offer</div>
-            </div>
-          </div>
-        </div>
-      </div>
+    <>
+      <div className="flex flex-col h-screen bg-gray-50 pt-0">
+      {/* Unified Header Component */}
+      <Header />
 
       {/* Admin Controls */}
       {isAdmin && (
@@ -944,14 +917,6 @@ export default function GroupChatPolling() {
                 {/* Hotel Voting Header with Timer */}
                 <div className="bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl shadow-lg p-6 text-white">
                   <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <h2 className="text-2xl font-bold mb-1">
-                        🏨 Vote for Your Favorite Hotel
-                      </h2>
-                      <p className="text-purple-100">
-                        React with 👍 or 👎 to help the group decide
-                      </p>
-                    </div>
                     {hotelVotingStatus === 'active' && hotelVotingTimer && (
                       <div className="bg-white/20 backdrop-blur-sm rounded-lg px-4 py-2 text-center">
                         <div className="text-xs font-semibold mb-1">TIME REMAINING</div>
@@ -974,7 +939,14 @@ export default function GroupChatPolling() {
                   {hotelVotingStatus === 'closed' && selectedHotel && (
                     <div className="mt-3 bg-white/20 backdrop-blur-sm rounded-lg p-4">
                       <div className="flex items-center gap-3 mb-3">
-                        <span className="text-4xl">{selectedHotel.image}</span>
+                        <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
+                          <img
+                            src={selectedHotel.image}
+                            alt={selectedHotel.name}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                        </div>
                         <div>
                           <div className="text-sm font-semibold mb-1">🏆 WINNER SELECTED!</div>
                           <div className="text-xl font-bold">{selectedHotel.name}</div>
@@ -1362,6 +1334,7 @@ export default function GroupChatPolling() {
         />
       )}
     </div>
+    </>
   );
 }
 
@@ -1619,7 +1592,7 @@ const POLL_WIZARD_TEMPLATES = [
     type: 'amenities' as const,
     title: 'Top Amenities',
     description: 'Capture what features guests want in their hotel.',
-    defaultQuestion: 'Which amenities are must-haves?',
+    defaultQuestion: 'Which amenities are must-have?',
     defaultOptions: ['Swimming Pool', 'Beach Access', 'Spa', 'Restaurant'],
   },
 ];
@@ -1884,7 +1857,14 @@ function HotelVotingCard({ hotel, currentUserId, tripId, votingClosed }: { hotel
           <div className="flex items-start justify-between mb-4">
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
-                <span className="text-4xl">{hotel.image}</span>
+                <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
+                  <img
+                    src={hotel.image}
+                    alt={hotel.name}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                </div>
                 <div>
                   <h3 className="text-xl font-bold text-gray-900">{hotel.name}</h3>
                   <div className="flex items-center gap-2 text-sm text-gray-600">

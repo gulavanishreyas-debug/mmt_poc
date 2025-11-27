@@ -40,7 +40,7 @@
   }
   
   .floating-widget {
-    @apply fixed top-6 right-6 z-50 bg-gradient-to-r from-mmt-blue to-mmt-purple text-white px-6 py-3 rounded-full shadow-2xl cursor-pointer hover:scale-105 transition-transform duration-200 flex items-center gap-2 font-semibold;
+    @apply fixed top-24 right-6 z-50 bg-gradient-to-r from-mmt-blue to-mmt-purple text-white px-6 py-3 rounded-full shadow-2xl cursor-pointer hover:scale-105 transition-transform duration-200 flex items-center gap-2 font-semibold;
   }
   
   .badge {

@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { useTripStore } from '@/lib/store';
 import { useEffect, useState } from 'react';
 import { Users, Clock } from 'lucide-react';
+import Header from './Header';
 
 export default function TripHub() {
   const { tripId, tripName, members, requiredMembers, isDiscountUnlocked } = useTripStore();
@@ -72,7 +73,9 @@ export default function TripHub() {
   const remaining = Math.max(0, requiredMembers - members.length);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50">
+    <>
+      <Header />
+      <div className="min-h-screen pt-20 flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50">
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -145,5 +148,6 @@ export default function TripHub() {
         </div>
       </motion.div>
     </div>
+    </>
   );
 }

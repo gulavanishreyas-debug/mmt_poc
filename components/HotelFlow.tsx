@@ -5,6 +5,7 @@ import { useTripStore, Hotel } from '@/lib/store';
 import HotelSelection from './HotelSelection';
 import HotelVoting from './HotelVoting';
 import { motion } from 'framer-motion';
+import Header from './Header';
 
 export default function HotelFlow() {
   const { tripId, members, currentUserId, destination, shortlistedHotels, addHotel, setStep, hotelVotingStatus } = useTripStore();
@@ -106,7 +107,9 @@ export default function HotelFlow() {
 
   // Everyone sees voting once shortlist is shared
   return (
-    <div>
+    <>
+      <Header />
+      <div className="pt-16">
       <HotelVoting />
       
       {/* Admin: Review/Reset Hotel Selection Button */}
@@ -133,5 +136,6 @@ export default function HotelFlow() {
         </div>
       )}
     </div>
+    </>
   );
 }

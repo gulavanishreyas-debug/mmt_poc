@@ -166,7 +166,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'comfort-01',
     name: 'Lagoon Leaf Retreat',
-    image: '🌿',
+    image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=80',
     location: 'Candolim',
     price: 5200,
     rating: 4.2,
@@ -180,7 +180,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'comfort-02',
     name: 'Palm Grove Courtyard',
-    image: '🌴',
+    image: 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=800&q=80',
     location: 'Baga',
     price: 5600,
     rating: 4.3,
@@ -194,7 +194,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'comfort-03',
     name: 'Sunset Cove Residency',
-    image: '🌅',
+    image: 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800&q=80',
     location: 'Colva',
     price: 5900,
     rating: 4.1,
@@ -208,7 +208,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'comfort-04',
     name: 'Spice Route Hideaway',
-    image: '🪷',
+    image: 'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800&q=80',
     location: 'Panjim',
     price: 6100,
     rating: 4.4,
@@ -222,7 +222,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'comfort-05',
     name: 'Riverbend Garden Suites',
-    image: '💐',
+    image: 'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=800&q=80',
     location: 'Nerul',
     price: 6400,
     rating: 4.0,
@@ -236,7 +236,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'comfort-06',
     name: 'Coastal Comfort Inn',
-    image: '🏖️',
+    image: 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800&q=80',
     location: 'Dona Paula',
     price: 6900,
     rating: 4.2,
@@ -250,7 +250,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'comfort-07',
     name: 'Bamboo Breeze Podhouse',
-    image: '🎋',
+    image: 'https://images.unsplash.com/photo-1455587734955-081b22074882?w=800&q=80',
     location: 'Siolim',
     price: 5300,
     rating: 4.2,
@@ -264,7 +264,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'comfort-08',
     name: "Fisherman's Wharf Suites",
-    image: '⚓',
+    image: 'https://images.unsplash.com/photo-1561501900-3701fa6a0864?w=800&q=80',
     location: 'Betim',
     price: 5550,
     rating: 4.3,
@@ -278,7 +278,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'comfort-09',
     name: 'Hibiscus Courtyard Homes',
-    image: '🌺',
+    image: 'https://images.unsplash.com/photo-1584132967334-10e028bd69f7?w=800&q=80',
     location: 'Reis Magos',
     price: 5800,
     rating: 4.1,
@@ -292,7 +292,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'comfort-10',
     name: 'Mangrove Muse Residences',
-    image: '🌱',
+    image: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=800&q=80',
     location: 'Chorao Island',
     price: 6025,
     rating: 4.4,
@@ -306,7 +306,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'comfort-11',
     name: 'Sunlit Sal Estate',
-    image: '☀️',
+    image: 'https://images.unsplash.com/photo-1445991842772-097fea258e7b?w=800&q=80',
     location: 'Loutolim',
     price: 6280,
     rating: 4.3,
@@ -334,7 +334,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'comfort-13',
     name: 'Pepper Spice Residency',
-    image: '🧭',
+    image: 'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800&q=80',
     location: 'Mapusa',
     price: 6725,
     rating: 4.4,
@@ -348,7 +348,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'comfort-14',
     name: 'Laguna Azul Cabins',
-    image: '💧',
+    image: 'https://images.unsplash.com/photo-1566665797739-1674de7a421a?w=800&q=80',
     location: 'Arpora',
     price: 6950,
     rating: 4.5,
@@ -364,7 +364,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'explorer-01',
     name: 'Azure Bay Suites',
-    image: '🌊',
+    image: 'https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=800&q=80',
     location: 'Vagator',
     price: 7200,
     rating: 4.5,
@@ -378,7 +378,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'explorer-02',
     name: 'Coral Crest Manor',
-    image: '🐚',
+    image: 'https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=800&q=80',
     location: 'Anjuna',
     price: 7800,
     rating: 4.6,
@@ -392,7 +392,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'explorer-03',
     name: 'Harmony Sands Retreat',
-    image: '🎵',
+    image: 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800&q=80',
     location: 'Morjim',
     price: 8500,
     rating: 4.8,
@@ -406,7 +406,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'explorer-04',
     name: 'Seabreeze Collective Hotel',
-    image: '🌬️',
+    image: 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800&q=80',
     location: 'Calangute',
     price: 9200,
     rating: 4.7,
@@ -420,7 +420,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'explorer-05',
     name: 'Monsoon Grove Villas',
-    image: '🌧️',
+    image: 'https://images.unsplash.com/photo-1540541338287-41700207dee6?w=800&q=80',
     location: 'Sinquerim',
     price: 9800,
     rating: 4.9,
@@ -434,7 +434,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'explorer-06',
     name: 'Heritage Dunes Residences',
-    image: '🏛️',
+    image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=80',
     location: 'Saligao',
     price: 11200,
     rating: 4.6,
@@ -448,7 +448,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'explorer-07',
     name: 'Tidepool Transit Hotel',
-    image: '🌊',
+    image: 'https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=800&q=80',
     location: 'Ashwem',
     price: 7350,
     rating: 4.4,
@@ -462,7 +462,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'explorer-08',
     name: 'Ocean Cantina Collective',
-    image: '🌮',
+    image: 'https://images.unsplash.com/photo-1445991842772-097fea258e7b?w=800&q=80',
     location: 'Chapora',
     price: 7650,
     rating: 4.5,
@@ -476,7 +476,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'explorer-09',
     name: 'Sailwind Habitat',
-    image: '⛵',
+    image: 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=800&q=80',
     location: 'Miramar',
     price: 8125,
     rating: 4.7,
@@ -490,7 +490,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'explorer-10',
     name: 'Crafthouse Vista Suites',
-    image: '🧵',
+    image: 'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800&q=80',
     location: 'Porvorim',
     price: 8650,
     rating: 4.6,
@@ -504,7 +504,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'explorer-11',
     name: 'Riverlight Escapes',
-    image: '🛶',
+    image: 'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=800&q=80',
     location: 'Divar Island',
     price: 9280,
     rating: 4.8,
@@ -518,7 +518,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'explorer-12',
     name: 'Crimson Reef Residences',
-    image: '🪸',
+    image: 'https://images.unsplash.com/photo-1561501900-3701fa6a0864?w=800&q=80',
     location: 'Keri',
     price: 9860,
     rating: 4.7,
@@ -532,7 +532,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'explorer-13',
     name: 'Moonriver Culture House',
-    image: '🌙',
+    image: 'https://images.unsplash.com/photo-1584132967334-10e028bd69f7?w=800&q=80',
     location: 'Panjim Latin Quarter',
     price: 10550,
     rating: 4.9,
@@ -546,7 +546,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'explorer-14',
     name: 'Terracotta Ridges Retreat',
-    image: '🏺',
+    image: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=800&q=80',
     location: 'Parra',
     price: 11800,
     rating: 4.8,
@@ -562,7 +562,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'premium-01',
     name: 'Marina Grande Palace',
-    image: '⚓',
+    image: 'https://images.unsplash.com/photo-1445991842772-097fea258e7b?w=800&q=80',
     location: 'Bambolim',
     price: 12500,
     rating: 4.8,
@@ -576,7 +576,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'premium-02',
     name: 'Opal Horizon Resort',
-    image: '💎',
+    image: 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=800&q=80',
     location: 'Varca',
     price: 13800,
     rating: 4.9,
@@ -590,7 +590,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'premium-03',
     name: 'Tranquil Crest Estate',
-    image: '🏔️',
+    image: 'https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=800&q=80',
     location: 'Cavelossim',
     price: 14900,
     rating: 4.8,
@@ -604,7 +604,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'premium-04',
     name: 'Indigo Pearl Sanctuary',
-    image: '🫧',
+    image: 'https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=800&q=80',
     location: 'Assagao',
     price: 16200,
     rating: 4.9,
@@ -618,7 +618,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'premium-05',
     name: 'Vista Azure Manor',
-    image: '🏰',
+    image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=80',
     location: 'Betalbatim',
     price: 17500,
     rating: 4.95,
@@ -632,7 +632,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'premium-06',
     name: 'Prism Horizon Club',
-    image: '🔷',
+    image: 'https://images.unsplash.com/photo-1540541338287-41700207dee6?w=800&q=80',
     location: 'Varca',
     price: 12950,
     rating: 4.7,
@@ -646,7 +646,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'premium-07',
     name: 'Azure Lattice Estate',
-    image: '🪟',
+    image: 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800&q=80',
     location: 'Aldona',
     price: 13680,
     rating: 4.8,
@@ -660,7 +660,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'premium-08',
     name: 'Meridian Grove Resort',
-    image: '🧭',
+    image: 'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800&q=80',
     location: 'Mobor',
     price: 14400,
     rating: 4.85,
@@ -674,7 +674,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'premium-09',
     name: 'Solstice Pavilion Retreat',
-    image: '🌞',
+    image: 'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=800&q=80',
     location: 'Siquerim',
     price: 15150,
     rating: 4.9,
@@ -688,7 +688,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'premium-10',
     name: 'Cascade Sereno Villas',
-    image: '🪨',
+    image: 'https://images.unsplash.com/photo-1561501900-3701fa6a0864?w=800&q=80',
     location: 'Nagoa',
     price: 15900,
     rating: 4.88,
@@ -702,7 +702,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'premium-11',
     name: 'Luminous Garden Haveli',
-    image: '🕯️',
+    image: 'https://images.unsplash.com/photo-1584132967334-10e028bd69f7?w=800&q=80',
     location: 'Velha Goa',
     price: 16850,
     rating: 4.92,
@@ -716,7 +716,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'premium-12',
     name: 'Auric Palm Residences',
-    image: '🌴',
+    image: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=800&q=80',
     location: 'Cola',
     price: 17720,
     rating: 4.95,
@@ -732,7 +732,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'luxury-01',
     name: 'Aurora Luxe Pavilion',
-    image: '✨',
+    image: 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800&q=80',
     location: 'Benaulim',
     price: 18500,
     rating: 5.0,
@@ -746,7 +746,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'luxury-02',
     name: 'Celestial Bay Residences',
-    image: '🌌',
+    image: 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800&q=80',
     location: 'Colvale',
     price: 19800,
     rating: 4.95,
@@ -760,7 +760,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'luxury-03',
     name: 'Imperial Tides Estate',
-    image: '👑',
+    image: 'https://images.unsplash.com/photo-1540541338287-41700207dee6?w=800&q=80',
     location: 'Dona Paula',
     price: 21500,
     rating: 4.97,
@@ -774,7 +774,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'luxury-04',
     name: 'Crown Jewel Retreat',
-    image: '💠',
+    image: 'https://images.unsplash.com/photo-1566665797739-1674de7a421a?w=800&q=80',
     location: 'Arossim',
     price: 23200,
     rating: 5.0,
@@ -788,7 +788,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'luxury-05',
     name: 'Elysian Shore Palace',
-    image: '🏛️',
+    image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=80',
     location: 'Candolim',
     price: 25500,
     rating: 5.0,
@@ -802,7 +802,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'luxury-06',
     name: 'Halo Crest Enclave',
-    image: '👼',
+    image: 'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=800&q=80',
     location: 'Colva',
     price: 18950,
     rating: 4.96,
@@ -816,7 +816,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'luxury-07',
     name: 'Saffron Dune Residences',
-    image: '🧡',
+    image: 'https://images.unsplash.com/photo-1561501900-3701fa6a0864?w=800&q=80',
     location: 'Talpona',
     price: 20500,
     rating: 4.98,
@@ -830,7 +830,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'luxury-08',
     name: 'Celestria Sky Mansions',
-    image: '🌠',
+    image: 'https://images.unsplash.com/photo-1584132967334-10e028bd69f7?w=800&q=80',
     location: 'Velsao',
     price: 22400,
     rating: 5.0,
@@ -844,7 +844,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'luxury-09',
     name: 'Opaline River Citadel',
-    image: '🏯',
+    image: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=800&q=80',
     location: 'Old Goa',
     price: 24100,
     rating: 4.97,
@@ -858,7 +858,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'luxury-10',
     name: 'Mythic Lagoon Reserve',
-    image: '🐉',
+    image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=80',
     location: 'Cansaulim',
     price: 26750,
     rating: 5.0,
@@ -872,7 +872,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'luxury-11',
     name: 'Nocturne Pearl Sanctum',
-    image: '🌌',
+    image: 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800&q=80',
     location: 'Anjuna',
     price: 27980,
     rating: 4.99,
@@ -886,7 +886,7 @@ const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'luxury-12',
     name: 'Citrine Crown Atelier',
-    image: '👑',
+    image: 'https://images.unsplash.com/photo-1540541338287-41700207dee6?w=800&q=80',
     location: 'Agonda',
     price: 29800,
     rating: 5.0,
@@ -1368,8 +1368,13 @@ export default function HotelSelection({ destination, onShareShortlist }: HotelS
                         </div>
                       )}
                       <div className="flex gap-4 p-4">
-                        <div className="w-48 h-40 flex-shrink-0 bg-gradient-to-br from-blue-400 to-purple-400 rounded-lg flex items-center justify-center text-6xl">
-                          {hotel.image}
+                        <div className="w-48 h-40 flex-shrink-0 rounded-lg overflow-hidden">
+                          <img
+                            src={hotel.image}
+                            alt={hotel.name}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
                         </div>
                         <div className="flex-1">
                           <div className="flex items-start justify-between mb-2">
@@ -1476,3 +1481,4 @@ export default function HotelSelection({ destination, onShareShortlist }: HotelS
     </div>
   );
 }
+

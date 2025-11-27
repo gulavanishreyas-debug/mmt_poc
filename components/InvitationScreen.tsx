@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { Copy, Check, Share2, MessageCircle, Mail, Link as LinkIcon } from 'lucide-react';
 import { useTripStore } from '@/lib/store';
 import { generateShareLink } from '@/lib/utils';
+import Header from './Header';
 
 export default function InvitationScreen() {
   const { tripId, tripName, destination, members, requiredMembers, isDiscountUnlocked, setStep } = useTripStore();
@@ -90,7 +91,9 @@ export default function InvitationScreen() {
   };
 
   return (
-    <div className="min-h-screen py-8 px-4 flex items-center justify-center">
+    <>
+      <Header />
+      <div className="min-h-screen pt-20 pb-8 px-4 flex items-center justify-center bg-gray-50">
       <motion.div
         className="max-w-2xl w-full"
         initial={{ opacity: 0, scale: 0.9 }}
@@ -292,5 +295,6 @@ export default function InvitationScreen() {
         </motion.button>
       </motion.div>
     </div>
+    </>
   );
 }

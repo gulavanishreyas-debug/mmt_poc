@@ -6,6 +6,7 @@ import { Check, Star, Users, Calendar, Home, Share2, Sparkles } from 'lucide-rea
 import { useTripStore } from '@/lib/store';
 import { calculateDiscount } from '@/lib/utils';
 import { triggerSuccessConfetti } from '@/lib/confetti';
+import Header from './Header';
 
 export default function BookingScreen() {
   const {
@@ -208,7 +209,14 @@ export default function BookingScreen() {
 
             <div className="space-y-4">
               <div className="flex items-start gap-4">
-                <div className="text-5xl">{selectedHotel.image}</div>
+                <div className="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0">
+                  <img
+                    src={selectedHotel.image}
+                    alt={selectedHotel.name}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                </div>
                 <div className="flex-1">
                   <h4 className="text-lg font-bold text-gray-900">
                     {selectedHotel.name}
@@ -305,7 +313,7 @@ export default function BookingScreen() {
             transition={{ delay: 0.5 }}
           >
             <div className="text-5xl mb-3">🏆</div>
-            <h3 className="text-xl font-bold mb-2">Achievement Unlocked!</h3>
+            <h3 className="text-xl font-bold mb-2">+200 reward points credited to your wallet</h3>
             <p className="text-purple-100">
               Master Trip Planner - Organized a successful group trip
             </p>
@@ -330,7 +338,9 @@ export default function BookingScreen() {
   }
 
   return (
-    <div className="min-h-screen py-8 px-4">
+    <>
+      <Header />
+      <div className="min-h-screen pt-20 pb-8 px-4 bg-gray-50">
       <div className="max-w-4xl mx-auto">
         {isAdmin && (
           <div className="mb-6 flex justify-end">
@@ -368,8 +378,13 @@ export default function BookingScreen() {
           transition={{ delay: 0.1 }}
         >
           <div className="flex items-start gap-6 mb-6">
-            <div className="w-32 h-32 bg-gradient-to-br from-blue-400 to-purple-400 rounded-xl flex items-center justify-center text-6xl flex-shrink-0">
-              {selectedHotel.image}
+            <div className="w-32 h-32 rounded-xl overflow-hidden flex-shrink-0">
+              <img
+                src={selectedHotel.image}
+                alt={selectedHotel.name}
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
             </div>
             <div className="flex-1">
               <h2 className="text-2xl font-bold text-gray-900 mb-2">
@@ -485,22 +500,16 @@ export default function BookingScreen() {
         </motion.div>
 
         {/* Room Transparency Message */}
-        {selectedRoom && (
+        {/*selectedRoom && (
           <motion.div
             className="mt-6 p-4 bg-blue-50 border-2 border-blue-200 rounded-xl"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
           >
-            <p className="text-blue-700 text-center">
-              <span className="font-semibold">Admin selected:</span>{' '}
-              {roomTypes.find(r => r.id === selectedRoom)?.name} {roomTypes.find(r => r.id === selectedRoom)?.icon}
-            </p>
-            <p className="text-blue-600 text-sm text-center mt-1">
-              This selection will be shared with all trip members
-            </p>
           </motion.div>
-        )}
+        )} */}
       </div>
     </div>
+    </>
   );
 }

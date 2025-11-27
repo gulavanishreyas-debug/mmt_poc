@@ -167,7 +167,7 @@ export default function TripCreation({ onClose }: TripCreationProps = {}) {
   const isValid = tripName && destination && purpose && adminName && !isCreating;
 
   return (
-    <div className="min-h-screen py-8 px-4">
+    <div className="min-h-screen pb-8 px-4 bg-gray-50">
       <div className="max-w-3xl mx-auto">
         {/* Header */}
         <motion.div
