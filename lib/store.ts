@@ -219,7 +219,7 @@ export interface TripState {
   
   // UI State
   showTripHub: boolean;
-  currentStep: 'home' | 'create' | 'invite' | 'hub' | 'poll' | 'hotels' | 'room-selection' | 'guest-payment' | 'mybookings' | 'booking-details';
+  currentStep: 'home' | 'create' | 'invite' | 'hub' | 'poll' | 'hotels' | 'room-selection' | 'guest-payment' | 'booking' | 'mybookings' | 'booking-details';
   
   // Actions
   setTripDetails: (name: string, destination: string, purpose: TripPurpose, required: number) => void;

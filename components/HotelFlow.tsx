@@ -111,7 +111,7 @@ export default function HotelFlow() {
   };
 
   // Shared link mode - Show hotels in browsing mode (no trip needed)
-  const isSharedLinkMode = !tripId && prefillParams.fromLink && prefillParams.destination;
+  const isSharedLinkMode = Boolean(!tripId && prefillParams.fromLink && prefillParams.destination);
 
   // Admin sees hotel selection first, OR shared link mode
   if ((isAdmin && shortlistedHotels.length === 0 && !hasSharedShortlist) || isSharedLinkMode) {
