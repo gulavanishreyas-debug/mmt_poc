@@ -60,6 +60,105 @@ export interface BookingConfirmation {
   groupSize: number;
 }
 
+// Comprehensive booking data model for persistence
+export interface CompletedBooking {
+  bookingId: string;
+  userId: string;
+  tripId?: string;
+  
+  // Trip context
+  tripType: TripPurpose;
+  destination: string;
+  
+  // Hotel details
+  hotelId: string;
+  hotelName: string;
+  hotelImage?: string;
+  
+  // Stay details
+  checkIn: string;
+  checkOut: string;
+  guests: {
+    adults: number;
+    children: number;
+    rooms: number;
+  };
+  roomType?: string;
+  
+  // Pricing
+  pricing: {
+    baseFare: number;
+    taxes: number;
+    fees: number;
+    subtotal: number;
+  };
+  
+  // Discounts
+  discounts?: {
+    promoCode?: string;
+    percentage?: number;
+    amount: number;
+    finalTotal: number;
+  };
+  
+  // Payment
+  paymentStatus: 'Success' | 'Failed' | 'Pending';
+  paymentRef?: string;
+  
+  // Metadata
+  createdAt: string;
+  updatedAt: string;
+  metadata?: {
+    sourceChannel?: string;
+    deviceType?: string;
+    experimentFlags?: string[];
+  };
+  
+  // Status
+  status: 'Confirmed' | 'Cancelled' | 'Completed';
+  cancellable: boolean;
+}
+
+// Shareable link interface
+export interface ShareableLink {
+  linkId: string;
+  bookingId: string;
+  creatorUserId: string;
+  
+  // Link context
+  destination: string;
+  hotelId: string;
+  hotelName: string;
+  checkIn: string;
+  checkOut: string;
+  guests: {
+    adults: number;
+    children: number;
+    rooms: number;
+  };
+  
+  // Discount info
+  discountSummary?: {
+    percentage?: number;
+    amount?: number;
+    promoCode?: string;
+  };
+  
+  // Access control
+  permissions: 'PUBLIC' | 'RESTRICTED';
+  maxUses?: number;
+  currentUses: number;
+  
+  // Metadata
+  createdAt: string;
+  expiresAt: string;
+  utmSource?: string;
+  utmCampaign?: string;
+  
+  // Status
+  isActive: boolean;
+}
+
 export interface Hotel {
   id: string;
   name: string;
@@ -107,9 +206,13 @@ export interface TripState {
   hotelBookingStatus: 'pending' | 'confirmed' | null;
   bookingConfirmation: BookingConfirmation | null;
   
+  // Bookings
+  myBookings: CompletedBooking[];
+  currentBooking: CompletedBooking | null;
+  
   // UI State
   showTripHub: boolean;
-  currentStep: 'home' | 'create' | 'invite' | 'hub' | 'poll' | 'hotels' | 'booking' | 'success';
+  currentStep: 'home' | 'create' | 'invite' | 'hub' | 'poll' | 'hotels' | 'booking' | 'success' | 'mybookings' | 'booking-details';
   
   // Actions
   setTripDetails: (name: string, destination: string, purpose: TripPurpose, required: number) => void;
@@ -132,6 +235,11 @@ export interface TripState {
   addPoll: (poll: Poll) => void;
   updatePoll: (poll: Poll) => void;
   setActivePoll: (poll: Poll | null) => void;
+  
+  // Booking Actions
+  addBooking: (booking: CompletedBooking) => void;
+  setCurrentBooking: (bookingId: string | null) => void;
+  loadMyBookings: (userId: string) => void;
 }
 
 export const useTripStore = create<TripState>((set, get) => ({
@@ -158,6 +266,8 @@ export const useTripStore = create<TripState>((set, get) => ({
   hotelVotingExpiresAt: null,
   hotelBookingStatus: null,
   bookingConfirmation: null,
+  myBookings: [],
+  currentBooking: null,
   showTripHub: false,
   currentStep: 'home',
   
@@ -372,5 +482,29 @@ export const useTripStore = create<TripState>((set, get) => ({
   
   setActivePoll: (poll) => {
     set({ activePoll: poll });
+  },
+  
+  // Booking Actions
+  addBooking: (booking) => {
+    set((state) => ({
+      myBookings: [booking, ...state.myBookings]
+    }));
+  },
+  
+  setCurrentBooking: (bookingId) => {
+    const booking = bookingId ? get().myBookings.find(b => b.bookingId === bookingId) : null;
+    set({ currentBooking: booking || null });
+  },
+  
+  loadMyBookings: async (userId) => {
+    try {
+      const response = await fetch(`/api/social-cart/bookings?userId=${userId}`);
+      if (response.ok) {
+        const bookings = await response.json();
+        set({ myBookings: bookings });
+      }
+    } catch (error) {
+      console.error('Failed to load bookings:', error);
+    }
   },
 }));

@@ -82,13 +82,30 @@ export default function BookingScreen() {
       const checkOutDate = new Date(checkInDate);
       checkOutDate.setDate(checkOutDate.getDate() + 3);
 
+      const selectedRoomType = roomTypes.find(r => r.id === selectedRoom);
+      const roomPrice = selectedRoomType?.extraCost || 0;
+      const totalPrice = finalPrice + roomPrice;
+      const baseFare = totalPrice * 0.85;
+      const taxes = totalPrice * 0.12;
+      const fees = totalPrice * 0.03;
+
       const bookingDetails = {
+        hotelId: selectedHotel.id,
         hotelName: selectedHotel.name,
-        checkIn: checkInDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-        checkOut: checkOutDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-        roomType: roomTypes.find(r => r.id === selectedRoom)?.name,
-        finalPrice,
+        hotelImage: selectedHotel.image,
+        checkIn: checkInDate.toISOString(),
+        checkOut: checkOutDate.toISOString(),
+        roomType: selectedRoomType?.name,
+        adults: members.length,
+        children: 0,
+        rooms: 1,
         groupSize: members.length,
+        finalPrice: totalPrice,
+        baseFare,
+        taxes,
+        fees,
+        discount,
+        discountPercentage: Math.round((discount / basePrice) * 100),
       };
 
       const response = await fetch('/api/social-cart/booking/confirm', {
@@ -96,6 +113,7 @@ export default function BookingScreen() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tripId,
+          userId: currentUserId,
           bookingDetails,
         }),
       });
@@ -106,6 +124,12 @@ export default function BookingScreen() {
 
       const data = await response.json();
       setBookingId(data.bookingId);
+      
+      // Save booking to store
+      if (data.booking) {
+        useTripStore.getState().addBooking(data.booking);
+      }
+      
       useTripStore.setState({
         hotelBookingStatus: 'confirmed',
         bookingConfirmation: {

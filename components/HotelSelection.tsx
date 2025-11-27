@@ -906,9 +906,10 @@ const AVAILABLE_AMENITY_KEYS = Array.from(
 interface HotelSelectionProps {
   destination: string;
   onShareShortlist: (hotels: Hotel[]) => void;
+  prefillHotelId?: string;
 }
 
-export default function HotelSelection({ destination, onShareShortlist }: HotelSelectionProps) {
+export default function HotelSelection({ destination, onShareShortlist, prefillHotelId }: HotelSelectionProps) {
   const polls = useTripStore((state) => state.polls);
   const shortlistedHotels = useTripStore((state) => state.shortlistedHotels);
   const [selectedHotels, setSelectedHotels] = useState<Set<string>>(new Set());
@@ -918,6 +919,24 @@ export default function HotelSelection({ destination, onShareShortlist }: HotelS
   const [priceRange, setPriceRange] = useState({ min: 0, max: DEFAULT_MAX_PRICE });
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
   const [bannerMessage, setBannerMessage] = useState('');
+  const [hotelNotAvailable, setHotelNotAvailable] = useState(false);
+
+  // Handle prefill from shared link
+  useEffect(() => {
+    if (prefillHotelId) {
+      const prefillHotel = AVAILABLE_HOTELS.find(h => h.id === prefillHotelId);
+      if (prefillHotel) {
+        setSelectedHotels(new Set([prefillHotelId]));
+        setBannerMessage(`✨ Pre-selected hotel from shared link: ${prefillHotel.name}`);
+        console.log('🔗 [HotelSelection] Pre-selected hotel:', prefillHotel.name);
+      } else {
+        // Hotel not available - show fallback message
+        setHotelNotAvailable(true);
+        setBannerMessage('⚠️ Original hotel unavailable—showing similar options in this destination');
+        console.log('⚠️ [HotelSelection] Prefilled hotel not found:', prefillHotelId);
+      }
+    }
+  }, [prefillHotelId]);
   const [showBanner, setShowBanner] = useState(false);
   const [isFiltering, setIsFiltering] = useState(false);
 

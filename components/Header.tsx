@@ -225,13 +225,15 @@ export default function Header() {
                     >
                       My Profile
                     </a>
-                    <a
-                      href="/bookings"
-                      className="block px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors border-b border-gray-100"
-                      onClick={() => setIsUserDropdownOpen(false)}
+                    <button
+                      onClick={() => {
+                        setIsUserDropdownOpen(false);
+                        useTripStore.setState({ currentStep: 'mybookings' });
+                      }}
+                      className="block w-full text-left px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors border-b border-gray-100"
                     >
                       My Bookings
-                    </a>
+                    </button>
                     <a
                       href="/wishlist"
                       className="block px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors border-b border-gray-100"
@@ -317,13 +319,15 @@ export default function Header() {
                 >
                   My Profile
                 </a>
-                <a
-                  href="/bookings"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="block rounded-md px-3 py-2 text-sm font-medium text-white/80 hover:bg-white/10 transition-colors"
+                <button
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    useTripStore.setState({ currentStep: 'mybookings' });
+                  }}
+                  className="block w-full text-left rounded-md px-3 py-2 text-sm font-medium text-white/80 hover:bg-white/10 transition-colors"
                 >
                   My Bookings
-                </a>
+                </button>
                 <a
                   href="/wishlist"
                   onClick={() => setIsMobileMenuOpen(false)}

@@ -2,6 +2,7 @@
 // Falls back to in-memory storage for local development
 
 import type { Trip } from './storage';
+import type { CompletedBooking, ShareableLink } from '@/lib/store';
 
 // Try to import Vercel KV at the top level (better for production)
 let kv: any = null;
@@ -29,12 +30,30 @@ console.log(`🔵 [KV-Adapter] Environment check:`, {
 // Local in-memory storage for development (MUST be global to persist across requests)
 declare global {
   var localTripsStore: Map<string, Trip> | undefined;
+  var localBookingsStore: Map<string, CompletedBooking> | undefined;
+  var localLinksStore: Map<string, ShareableLink> | undefined;
+  var userBookingsIndex: Map<string, Set<string>> | undefined;
 }
 
 const localTrips = global.localTripsStore || new Map<string, Trip>();
 if (!global.localTripsStore) {
   global.localTripsStore = localTrips;
   console.log('🔵 [KV-Adapter] Initialized global local trips store');
+}
+
+const localBookings = global.localBookingsStore || new Map<string, CompletedBooking>();
+if (!global.localBookingsStore) {
+  global.localBookingsStore = localBookings;
+}
+
+const localLinks = global.localLinksStore || new Map<string, ShareableLink>();
+if (!global.localLinksStore) {
+  global.localLinksStore = localLinks;
+}
+
+const userBookingsIndex = global.userBookingsIndex || new Map<string, Set<string>>();
+if (!global.userBookingsIndex) {
+  global.userBookingsIndex = userBookingsIndex;
 }
 
 /**
@@ -168,3 +187,116 @@ export async function getAllTripIds(): Promise<string[]> {
 
 // Export storage mode for logging
 export const storageMode = useKV ? 'KV' : 'LOCAL';
+
+/**
+ * Booking storage functions
+ */
+export async function getBooking(bookingId: string): Promise<CompletedBooking | null> {
+  try {
+    if (useKV && kv) {
+      return await kv.get(`booking:${bookingId}`) as CompletedBooking | null;
+    }
+    return localBookings.get(bookingId) || null;
+  } catch (error) {
+    console.error(`❌ [KV-Adapter] Error getting booking ${bookingId}:`, error);
+    return null;
+  }
+}
+
+export async function setBooking(bookingId: string, booking: CompletedBooking): Promise<void> {
+  try {
+    if (useKV && kv) {
+      await kv.set(`booking:${bookingId}`, booking, { ex: 60 * 60 * 24 * 365 }); // 1 year TTL
+      // Add to user's booking list
+      await kv.sadd(`user:${booking.userId}:bookings`, bookingId);
+    } else {
+      localBookings.set(bookingId, booking);
+      // Index by user
+      if (!userBookingsIndex.has(booking.userId)) {
+        userBookingsIndex.set(booking.userId, new Set());
+      }
+      userBookingsIndex.get(booking.userId)!.add(bookingId);
+    }
+    console.log(`💾 [KV-Adapter] Saved booking ${bookingId} for user ${booking.userId}`);
+  } catch (error) {
+    console.error(`❌ [KV-Adapter] Error setting booking ${bookingId}:`, error);
+    throw error;
+  }
+}
+
+export async function getUserBookings(userId: string): Promise<CompletedBooking[]> {
+  try {
+    if (useKV && kv) {
+      const bookingIds = await kv.smembers(`user:${userId}:bookings`) as string[];
+      const bookings: CompletedBooking[] = [];
+      for (const bookingId of bookingIds) {
+        const booking = await kv.get(`booking:${bookingId}`) as CompletedBooking | null;
+        if (booking) bookings.push(booking);
+      }
+      return bookings.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    } else {
+      const bookingIds = userBookingsIndex.get(userId);
+      if (!bookingIds) return [];
+      const bookings: CompletedBooking[] = [];
+      for (const bookingId of Array.from(bookingIds)) {
+        const booking = localBookings.get(bookingId);
+        if (booking) bookings.push(booking);
+      }
+      return bookings.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+  } catch (error) {
+    console.error(`❌ [KV-Adapter] Error getting user bookings for ${userId}:`, error);
+    return [];
+  }
+}
+
+/**
+ * Shareable link storage functions
+ */
+export async function getLink(linkId: string): Promise<ShareableLink | null> {
+  try {
+    if (useKV && kv) {
+      return await kv.get(`link:${linkId}`) as ShareableLink | null;
+    }
+    return localLinks.get(linkId) || null;
+  } catch (error) {
+    console.error(`❌ [KV-Adapter] Error getting link ${linkId}:`, error);
+    return null;
+  }
+}
+
+export async function setLink(linkId: string, link: ShareableLink): Promise<void> {
+  try {
+    const expirySeconds = Math.floor((new Date(link.expiresAt).getTime() - Date.now()) / 1000);
+    
+    if (useKV && kv) {
+      await kv.set(`link:${linkId}`, link, { ex: Math.max(expirySeconds, 60) });
+    } else {
+      localLinks.set(linkId, link);
+    }
+    console.log(`💾 [KV-Adapter] Saved link ${linkId} (expires in ${expirySeconds}s)`);
+  } catch (error) {
+    console.error(`❌ [KV-Adapter] Error setting link ${linkId}:`, error);
+    throw error;
+  }
+}
+
+export async function incrementLinkUses(linkId: string): Promise<void> {
+  try {
+    if (useKV && kv) {
+      const link = await getLink(linkId);
+      if (link) {
+        link.currentUses++;
+        await setLink(linkId, link);
+      }
+    } else {
+      const link = localLinks.get(linkId);
+      if (link) {
+        link.currentUses++;
+        localLinks.set(linkId, link);
+      }
+    }
+  } catch (error) {
+    console.error(`❌ [KV-Adapter] Error incrementing link uses ${linkId}:`, error);
+  }
+}

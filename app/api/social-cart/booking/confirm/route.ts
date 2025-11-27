@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { trips, broadcastToTrip } from '../../storage';
+import { setBooking } from '../../kv-adapter';
+import type { CompletedBooking } from '@/lib/store';
 
 export async function POST(request: NextRequest) {
   try {
-    const { tripId, bookingDetails } = await request.json();
+    const { tripId, bookingDetails, userId } = await request.json();
 
-    console.log('📋 [API/booking/confirm/POST] Booking confirmation:', { tripId });
+    console.log('📋 [API/booking/confirm/POST] Booking confirmation:', { tripId, userId });
 
-    if (!tripId || !bookingDetails) {
+    if (!tripId || !bookingDetails || !userId) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -24,38 +26,99 @@ export async function POST(request: NextRequest) {
 
     // Generate booking ID
     const bookingId = `MMT${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+    const now = new Date().toISOString();
     
-    // Store booking details
-    (trip as any).booking = {
-      ...bookingDetails,
+    // Create complete booking record
+    const completedBooking: CompletedBooking = {
       bookingId,
-      confirmedAt: new Date().toISOString(),
+      userId,
+      tripId,
+      tripType: trip.purpose as any,
+      destination: trip.destination,
+      hotelId: bookingDetails.hotelId || trip.selectedHotel?.id || 'hotel1',
+      hotelName: bookingDetails.hotelName || trip.selectedHotel?.name || 'Unknown Hotel',
+      hotelImage: bookingDetails.hotelImage || trip.selectedHotel?.image,
+      checkIn: bookingDetails.checkIn,
+      checkOut: bookingDetails.checkOut,
+      guests: {
+        adults: bookingDetails.adults || bookingDetails.groupSize || 2,
+        children: bookingDetails.children || 0,
+        rooms: bookingDetails.rooms || 1,
+      },
+      roomType: bookingDetails.roomType,
+      pricing: {
+        baseFare: bookingDetails.baseFare || bookingDetails.finalPrice * 0.85,
+        taxes: bookingDetails.taxes || bookingDetails.finalPrice * 0.12,
+        fees: bookingDetails.fees || bookingDetails.finalPrice * 0.03,
+        subtotal: bookingDetails.finalPrice || 10000,
+      },
+      discounts: bookingDetails.discount ? {
+        promoCode: bookingDetails.promoCode,
+        percentage: bookingDetails.discountPercentage,
+        amount: bookingDetails.discount,
+        finalTotal: bookingDetails.finalPrice,
+      } : undefined,
+      paymentStatus: 'Success',
+      paymentRef: `PAY${Math.random().toString(36).substr(2, 12).toUpperCase()}`,
+      createdAt: now,
+      updatedAt: now,
+      metadata: {
+        sourceChannel: 'web',
+        deviceType: 'desktop',
+      },
+      status: 'Confirmed',
+      cancellable: true,
     };
 
+    // Save booking for ALL members of the trip
+    // Each member gets their own copy of the booking
+    const savePromises = trip.members.map(member => {
+      const memberBooking: CompletedBooking = {
+        ...completedBooking,
+        userId: member.id, // Save for each member
+      };
+      return setBooking(`${bookingId}_${member.id}`, memberBooking);
+    });
+    
+    await Promise.all(savePromises);
+    
+    console.log(`✅ [API/booking/confirm/POST] Booking saved for ${trip.members.length} members`);
+    
+    // Also store in trip for backward compatibility
+    (trip as any).booking = completedBooking;
     (trip as any).hotelBookingStatus = 'confirmed';
-    (trip as any).bookingConfirmation = (trip as any).booking;
+    (trip as any).bookingConfirmation = {
+      bookingId,
+      hotelName: completedBooking.hotelName,
+      checkIn: completedBooking.checkIn,
+      checkOut: completedBooking.checkOut,
+      roomType: completedBooking.roomType,
+      finalPrice: completedBooking.pricing.subtotal,
+      groupSize: completedBooking.guests.adults + completedBooking.guests.children,
+    };
     
     await trips.set(tripId, trip);
 
-    console.log('✅ [API/booking/confirm/POST] Booking confirmed:', bookingId);
+    console.log('✅ [API/booking/confirm/POST] Booking confirmed and saved:', bookingId);
 
     // Broadcast booking confirmation to all members
     broadcastToTrip(tripId, {
       type: 'BOOKING_CONFIRMED',
       data: {
         bookingId,
-        hotelName: bookingDetails.hotelName,
-        checkIn: bookingDetails.checkIn,
-        checkOut: bookingDetails.checkOut,
-        roomType: bookingDetails.roomType,
-        finalPrice: bookingDetails.finalPrice,
-        groupSize: bookingDetails.groupSize,
+        hotelName: completedBooking.hotelName,
+        checkIn: completedBooking.checkIn,
+        checkOut: completedBooking.checkOut,
+        roomType: completedBooking.roomType,
+        finalPrice: completedBooking.pricing.subtotal,
+        groupSize: completedBooking.guests.adults + completedBooking.guests.children,
       },
     });
 
     return NextResponse.json({
       success: true,
       bookingId,
+      booking: completedBooking,
     });
   } catch (error) {
     console.error('❌ [API/booking/confirm/POST] Error:', error);

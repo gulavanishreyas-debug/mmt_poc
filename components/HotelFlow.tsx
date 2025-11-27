@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTripStore, Hotel } from '@/lib/store';
 import HotelSelection from './HotelSelection';
 import HotelVoting from './HotelVoting';
@@ -10,9 +10,44 @@ import Header from './Header';
 export default function HotelFlow() {
   const { tripId, members, currentUserId, destination, shortlistedHotels, addHotel, setStep, hotelVotingStatus } = useTripStore();
   const [hasSharedShortlist, setHasSharedShortlist] = useState(false);
+  const [prefillParams, setPrefillParams] = useState<{
+    destination?: string;
+    hotelId?: string;
+    checkIn?: string;
+    checkOut?: string;
+    adults?: string;
+    children?: string;
+    rooms?: string;
+    fromLink?: string;
+  }>({});
+  const [showPrefillBanner, setShowPrefillBanner] = useState(false);
 
   const currentUser = members.find(m => m.id === currentUserId);
   const isAdmin = currentUser?.isAdmin || false;
+
+  // Check for URL prefill parameters on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const prefill = {
+        destination: params.get('destination') || undefined,
+        hotelId: params.get('hotelId') || undefined,
+        checkIn: params.get('checkIn') || undefined,
+        checkOut: params.get('checkOut') || undefined,
+        adults: params.get('adults') || undefined,
+        children: params.get('children') || undefined,
+        rooms: params.get('rooms') || undefined,
+        fromLink: params.get('fromLink') || undefined,
+      };
+
+      // Only show banner if we have prefill data
+      if (prefill.destination || prefill.hotelId) {
+        setPrefillParams(prefill);
+        setShowPrefillBanner(true);
+        console.log('🔗 [HotelFlow] Detected prefill parameters:', prefill);
+      }
+    }
+  }, []);
 
   const handleResetHotelSelection = () => {
     if (hotelVotingStatus === 'closed') {
@@ -72,7 +107,41 @@ export default function HotelFlow() {
 
   // Admin sees hotel selection first
   if (isAdmin && shortlistedHotels.length === 0 && !hasSharedShortlist) {
-    return <HotelSelection destination={destination} onShareShortlist={handleShareShortlist} />;
+    return (
+      <>
+        {showPrefillBanner && prefillParams.destination && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-blue-100 border-l-4 border-blue-500 p-4 mb-4"
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">🔗</span>
+              <div>
+                <p className="font-semibold text-blue-900">
+                  Prefilled from shared link
+                </p>
+                <p className="text-sm text-blue-700">
+                  Showing hotels for {prefillParams.destination}
+                  {prefillParams.checkIn && ` • ${new Date(prefillParams.checkIn).toLocaleDateString()} to ${new Date(prefillParams.checkOut!).toLocaleDateString()}`}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowPrefillBanner(false)}
+                className="ml-auto text-blue-500 hover:text-blue-700 font-bold"
+              >
+                ✕
+              </button>
+            </div>
+          </motion.div>
+        )}
+        <HotelSelection 
+          destination={prefillParams.destination || destination} 
+          onShareShortlist={handleShareShortlist}
+          prefillHotelId={prefillParams.hotelId}
+        />
+      </>
+    );
   }
 
   // Non-admin waits for shortlist

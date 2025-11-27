@@ -10,6 +10,8 @@ import TripHub from '@/components/TripHub';
 import GroupChatPolling from '@/components/GroupChatPolling';
 import HotelFlow from '@/components/HotelFlow';
 import BookingScreen from '@/components/BookingScreen';
+import MyBookings from '@/components/MyBookings';
+import BookingDetails from '@/components/BookingDetails';
 import FloatingWidget from '@/components/FloatingWidget';
 
 export default function Home() {
@@ -51,6 +53,8 @@ export default function Home() {
       {currentStep === 'poll' && <GroupChatPolling />}
       {currentStep === 'hotels' && <HotelFlow />}
       {currentStep === 'booking' && <BookingScreen />}
+      {currentStep === 'mybookings' && <MyBookings />}
+      {currentStep === 'booking-details' && <BookingDetails />}
     </main>
   );
 }
