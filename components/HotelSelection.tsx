@@ -320,7 +320,7 @@ export const AVAILABLE_HOTELS: Omit<Hotel, 'votes'>[] = [
   createHotel({
     id: 'comfort-12',
     name: 'Coconut Cascade Lodge',
-    image: '🥥',
+    image: 'https://images.unsplash.com/photo-1566665797739-1674de7a421a?w=800&q=80',
     location: 'Majorda',
     price: 6550,
     rating: 4.2,

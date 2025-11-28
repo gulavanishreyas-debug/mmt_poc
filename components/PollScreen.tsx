@@ -44,9 +44,9 @@ export default function PollScreen() {
 
   const budgetOptions = useMemo(
     () => [
-      { id: '6-8k', label: '₹6-8K', range: 'Budget Friendly' },
-      { id: '8-10k', label: '₹8-10K', range: 'Mid Range' },
-      { id: '10k+', label: '₹10K+', range: 'Premium' },
+      { id: '5-10k', label: '₹5,000 - ₹10,000', range: 'Budget Friendly' },
+      { id: '10-15k', label: '₹10,000 - ₹15,000', range: 'Mid Range' },
+      { id: '15k+', label: '₹15,000+', range: 'Premium' },
     ],
     []
   );

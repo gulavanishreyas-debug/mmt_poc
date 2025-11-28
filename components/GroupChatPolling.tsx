@@ -284,13 +284,12 @@ export default function GroupChatPolling() {
           if (!isMounted) return;
           const serverMessages = data.messages || [];
           setChatMessages(prev => {
-            if (prev.length === serverMessages.length) {
-              const unchanged = prev.every((msg, idx) => msg.id === serverMessages[idx]?.id);
-              if (unchanged) {
-                return prev;
-              }
-            }
-            return serverMessages;
+            // Always merge server messages with local state to prevent loss of just-added messages
+            const messageIds = new Set(serverMessages.map((m: any) => m.id));
+            const localOnlyMessages = prev.filter((m: any) => !messageIds.has(m.id));
+            const merged = [...serverMessages, ...localOnlyMessages];
+            console.log('💬 [Chat] Merged messages:', { server: serverMessages.length, localOnly: localOnlyMessages.length, total: merged.length });
+            return merged;
           });
         }
       } catch (error) {
@@ -345,9 +344,17 @@ export default function GroupChatPolling() {
 
   // Ensure booking confirmations show up even if admin returns later
   useEffect(() => {
-    if (!bookingConfirmation || !tripId) return;
-    if (processedBookingMessages.current.has(bookingConfirmation.bookingId)) return;
+    if (!bookingConfirmation || !tripId) {
+      console.log('📋 [Booking] Waiting for bookingConfirmation:', { bookingConfirmation, tripId });
+      return;
+    }
+    console.log('📋 [Booking] Processing booking confirmation:', bookingConfirmation);
+    if (processedBookingMessages.current.has(bookingConfirmation.bookingId)) {
+      console.log('📋 [Booking] Already processed:', bookingConfirmation.bookingId);
+      return;
+    }
 
+    console.log('📋 [Booking] Adding booking message for:', bookingConfirmation.bookingId);
     processedBookingMessages.current.add(bookingConfirmation.bookingId);
 
     const bookingMessage = {
@@ -360,12 +367,57 @@ export default function GroupChatPolling() {
       timestamp: new Date().toISOString(),
     };
 
-    setChatMessages(prev => {
-      if (prev.some(msg => msg.id === bookingMessage.id)) {
-        return prev;
+    // Save booking message to API so it persists
+    const saveBookingMessage = async () => {
+      try {
+        console.log('📤 [Booking] Saving booking message to API:', bookingMessage.id);
+        const response = await fetch('/api/social-cart/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tripId,
+            senderId: 'system',
+            senderName: 'System',
+            senderAvatar: '🎉',
+            message: bookingMessage.message,
+          }),
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('✅ [Booking] Message saved to API:', data.message.id);
+          // Update local state with the API response (which has the correct ID)
+          setChatMessages(prev => {
+            if (prev.some(msg => msg.id === data.message.id)) {
+              console.log('📋 [Booking] Message already in chat');
+              return prev;
+            }
+            console.log('✅ [Booking] Message added to chat from API response');
+            return [...prev, data.message];
+          });
+        } else {
+          console.error('❌ [Booking] Failed to save message:', response.status);
+          // Fallback: add to local state anyway
+          setChatMessages(prev => {
+            if (prev.some(msg => msg.id === bookingMessage.id)) {
+              return prev;
+            }
+            return [...prev, bookingMessage];
+          });
+        }
+      } catch (error) {
+        console.error('❌ [Booking] Error saving message:', error);
+        // Fallback: add to local state anyway
+        setChatMessages(prev => {
+          if (prev.some(msg => msg.id === bookingMessage.id)) {
+            return prev;
+          }
+          return [...prev, bookingMessage];
+        });
       }
-      return [...prev, bookingMessage];
-    });
+    };
+
+    saveBookingMessage();
   }, [bookingConfirmation, tripId]);
 
   // Remove member (admin only)
@@ -1579,7 +1631,7 @@ const POLL_WIZARD_TEMPLATES = [
     title: 'Budget Range',
     description: 'Ask the group what price bracket they are comfortable paying for the trip.',
     defaultQuestion: "What's your preferred budget bracket for accommodations?",
-    defaultOptions: ['₹5,000 - ₹7,000', '₹7,000 - ₹12,000', '₹12,000 - ₹18,000', '₹18,000+'],
+    defaultOptions: ['₹5,000 - ₹10,000', '₹10,000 - ₹15,000', '₹15,000+'],
   },
   {
     type: 'dates' as const,

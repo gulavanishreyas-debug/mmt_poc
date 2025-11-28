@@ -85,10 +85,9 @@ export async function POST(request: NextRequest) {
         budget: {
           question: "What's your budget range for this trip?",
           options: [
-            { id: 'opt0', text: '₹5,000 - ₹7,000', votes: [] },
-            { id: 'opt1', text: '₹7,000 - ₹12,000', votes: [] },
-            { id: 'opt2', text: '₹12,000 - ₹18,000', votes: [] },
-            { id: 'opt3', text: '₹18,000+', votes: [] },
+            { id: 'opt0', text: '₹5,000 - ₹10,000', votes: [] },
+            { id: 'opt1', text: '₹10,000 - ₹15,000', votes: [] },
+            { id: 'opt2', text: '₹15,000+', votes: [] },
           ],
         },
         dates: {

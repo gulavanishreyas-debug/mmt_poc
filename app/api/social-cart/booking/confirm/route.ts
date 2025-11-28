@@ -114,6 +114,7 @@ export async function POST(request: NextRequest) {
 
     // Broadcast booking confirmation to all members (only if trip exists)
     if (tripId && trip) {
+      console.log('📡 [API/booking/confirm] Broadcasting to trip:', tripId);
       broadcastToTrip(tripId, {
         type: 'BOOKING_CONFIRMED',
         data: {
@@ -126,6 +127,9 @@ export async function POST(request: NextRequest) {
           groupSize: completedBooking.guests.adults + completedBooking.guests.children,
         },
       });
+      console.log('✅ [API/booking/confirm] Broadcast sent for trip:', tripId);
+    } else {
+      console.log('⚠️ [API/booking/confirm] Booking confirmed but broadcast skipped. Reason: tripId=' + (tripId ? 'set' : 'null') + ', trip=' + (trip ? 'found' : 'notfound'));
     }
 
     return NextResponse.json({

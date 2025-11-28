@@ -336,12 +336,14 @@ export function useRealTimeSync(tripId: string | null) {
 
           case 'BOOKING_CONFIRMED':
             console.log('📋 [SSE] Booking confirmed:', message.data.bookingId);
+            console.log('📋 [SSE] Booking data:', message.data);
             useTripStore.setState({
               hotelBookingStatus: 'confirmed',
               bookingConfirmation: message.data,
             });
             // Dispatch custom event for booking confirmation message in chat
             if (typeof window !== 'undefined') {
+              console.log('📋 [SSE] Dispatching booking-confirmed custom event');
               window.dispatchEvent(new CustomEvent('booking-confirmed', { 
                 detail: message.data 
               }));
