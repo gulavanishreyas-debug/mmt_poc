@@ -1537,7 +1537,7 @@ function PollCard({
                 {/* Option Text */}
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
-                    <span className="font-medium text-gray-900">{option.text}</span>
+                    <span className="font-medium text-gray-900">{getDisplayText(option.text)}</span>
                     {isWinner && isClosed && <span className="text-xl">🏆</span>}
                   </div>
                   
@@ -1638,7 +1638,8 @@ const POLL_WIZARD_TEMPLATES = [
     title: 'Travel Dates',
     description: 'Pin down the best travel window for everyone.',
     defaultQuestion: 'Which range of dates works best for you?',
-    defaultOptions: ['Dec 20-25', 'Dec 26-31', 'Jan 1-5', 'Jan 6-10'],
+    // Date options will be generated dynamically with date pickers
+    defaultOptions: [] as string[],
   },
   {
     type: 'amenities' as const,
@@ -1649,6 +1650,58 @@ const POLL_WIZARD_TEMPLATES = [
   },
 ];
 
+// Helper to generate default date ranges
+const generateDefaultDateRanges = () => {
+  const today = new Date();
+  const ranges: { startDate: string; endDate: string }[] = [];
+  
+  // Generate 3 default date ranges starting from 7 days from now
+  for (let i = 0; i < 3; i++) {
+    const start = new Date(today);
+    start.setDate(today.getDate() + 7 + (i * 7)); // 7, 14, 21 days from now
+    const end = new Date(start);
+    end.setDate(start.getDate() + 4); // 5-day trips
+    
+    ranges.push({
+      startDate: start.toISOString().split('T')[0],
+      endDate: end.toISOString().split('T')[0],
+    });
+  }
+  return ranges;
+};
+
+// Format date range for display (e.g., "Dec 5 - 9, 2025")
+const formatDateRangeDisplay = (startDate: string, endDate: string) => {
+  if (!startDate || !endDate) return '';
+  const start = new Date(startDate + 'T00:00:00');
+  const end = new Date(endDate + 'T00:00:00');
+  
+  const startMonth = start.toLocaleDateString('en-US', { month: 'short' });
+  const endMonth = end.toLocaleDateString('en-US', { month: 'short' });
+  const startDay = start.getDate();
+  const endDay = end.getDate();
+  const year = end.getFullYear();
+  
+  if (startMonth === endMonth) {
+    return `${startMonth} ${startDay} - ${endDay}, ${year}`;
+  }
+  return `${startMonth} ${startDay} - ${endMonth} ${endDay}, ${year}`;
+};
+
+// Create option text with hidden ISO dates at the end (parseable but stripped in UI)
+// Format: "Dec 5 - 9, 2025 [2025-12-05:2025-12-09]"
+const createDateOptionText = (startDate: string, endDate: string) => {
+  const display = formatDateRangeDisplay(startDate, endDate);
+  // Append ISO dates in a parseable format
+  return `${display} [${startDate}:${endDate}]`;
+};
+
+// Strip hidden ISO dates from option text for display
+// "Dec 5 - 9, 2025 [2025-12-05:2025-12-09]" -> "Dec 5 - 9, 2025"
+const getDisplayText = (text: string) => {
+  return text.replace(/\s*\[\d{4}-\d{2}-\d{2}:\d{4}-\d{2}-\d{2}\]$/, '');
+};
+
 type PollWizardConfig = {
   type: 'budget' | 'dates' | 'amenities';
   title: string;
@@ -1656,6 +1709,8 @@ type PollWizardConfig = {
   question: string;
   options: string[];
   duration: number;
+  // For dates type, store structured date ranges
+  dateRanges?: { startDate: string; endDate: string }[];
 };
 
 function PollWizardModal({
@@ -1666,14 +1721,29 @@ function PollWizardModal({
   onStart: (configs: { type: 'budget' | 'dates' | 'amenities'; question: string; options: string[]; duration?: number }[]) => void;
 }) {
   const [configs, setConfigs] = useState<PollWizardConfig[]>(() =>
-    POLL_WIZARD_TEMPLATES.map(template => ({
-      type: template.type,
-      title: template.title,
-      description: template.description,
-      question: template.defaultQuestion,
-      options: [...template.defaultOptions],
-      duration: 300,
-    }))
+    POLL_WIZARD_TEMPLATES.map(template => {
+      if (template.type === 'dates') {
+        // Initialize dates with structured date ranges
+        const defaultRanges = generateDefaultDateRanges();
+        return {
+          type: template.type,
+          title: template.title,
+          description: template.description,
+          question: template.defaultQuestion,
+          options: defaultRanges.map(r => createDateOptionText(r.startDate, r.endDate)),
+          duration: 300,
+          dateRanges: defaultRanges,
+        };
+      }
+      return {
+        type: template.type,
+        title: template.title,
+        description: template.description,
+        question: template.defaultQuestion,
+        options: [...template.defaultOptions],
+        duration: 300,
+      };
+    })
   );
   const [currentStep, setCurrentStep] = useState(0);
   const [error, setError] = useState('');
@@ -1691,24 +1761,67 @@ function PollWizardModal({
     updateStep({ options: nextOptions });
   };
 
+  // Handle date range changes for dates poll type
+  const handleDateRangeChange = (idx: number, field: 'startDate' | 'endDate', value: string) => {
+    if (!currentConfig.dateRanges) return;
+    const nextRanges = [...currentConfig.dateRanges];
+    nextRanges[idx] = { ...nextRanges[idx], [field]: value };
+    
+    // Update both dateRanges and options (options store the ISO format for API)
+    const nextOptions = nextRanges.map(r => createDateOptionText(r.startDate, r.endDate));
+    updateStep({ dateRanges: nextRanges, options: nextOptions });
+  };
+
   const handleAddOption = () => {
     if (currentConfig.options.length >= 6) return;
-    updateStep({ options: [...currentConfig.options, ''] });
+    
+    if (currentConfig.type === 'dates' && currentConfig.dateRanges) {
+      // Add a new date range
+      const lastRange = currentConfig.dateRanges[currentConfig.dateRanges.length - 1];
+      const newStart = new Date(lastRange?.endDate || new Date());
+      newStart.setDate(newStart.getDate() + 1);
+      const newEnd = new Date(newStart);
+      newEnd.setDate(newStart.getDate() + 4);
+      
+      const newRange = {
+        startDate: newStart.toISOString().split('T')[0],
+        endDate: newEnd.toISOString().split('T')[0],
+      };
+      const nextRanges = [...currentConfig.dateRanges, newRange];
+      const nextOptions = nextRanges.map(r => createDateOptionText(r.startDate, r.endDate));
+      updateStep({ dateRanges: nextRanges, options: nextOptions });
+    } else {
+      updateStep({ options: [...currentConfig.options, ''] });
+    }
   };
 
   const handleRemoveOption = (idx: number) => {
     if (currentConfig.options.length <= 2) return;
-    const nextOptions = currentConfig.options.filter((_, index) => index !== idx);
-    updateStep({ options: nextOptions });
+    
+    if (currentConfig.type === 'dates' && currentConfig.dateRanges) {
+      const nextRanges = currentConfig.dateRanges.filter((_, index) => index !== idx);
+      const nextOptions = nextRanges.map(r => createDateOptionText(r.startDate, r.endDate));
+      updateStep({ dateRanges: nextRanges, options: nextOptions });
+    } else {
+      const nextOptions = currentConfig.options.filter((_, index) => index !== idx);
+      updateStep({ options: nextOptions });
+    }
   };
 
   const isConfigValid = (config: PollWizardConfig) => {
+    if (config.type === 'dates' && config.dateRanges) {
+      // For dates, check that we have at least 2 valid date ranges
+      const validRanges = config.dateRanges.filter(r => r.startDate && r.endDate && r.startDate <= r.endDate);
+      return config.question.trim().length > 0 && validRanges.length >= 2;
+    }
     return config.question.trim().length > 0 && config.options.filter(option => option.trim()).length >= 2;
   };
 
   const handleNext = () => {
     if (!isConfigValid(currentConfig)) {
-      setError('Add a question and at least two meaningful options to proceed.');
+      setError(currentConfig.type === 'dates' 
+        ? 'Add a question and at least two valid date ranges to proceed.'
+        : 'Add a question and at least two meaningful options to proceed.');
       return;
     }
     setError('');
@@ -1733,6 +1846,9 @@ function PollWizardModal({
       duration,
     })));
   };
+
+  // Get minimum date for date pickers (today)
+  const minDate = new Date().toISOString().split('T')[0];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
@@ -1774,27 +1890,72 @@ function PollWizardModal({
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">Options</label>
+            <label className="text-sm font-medium text-gray-700">
+              {currentConfig.type === 'dates' ? 'Date Ranges' : 'Options'}
+            </label>
             <div className="space-y-2">
-              {currentConfig.options.map((option, idx) => (
-                <div key={idx} className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={option}
-                    onChange={(e) => handleOptionChange(idx, e.target.value)}
-                    placeholder={`Option ${idx + 1}`}
-                    className="flex-1 rounded-xl border border-gray-200 px-4 py-2 focus:border-mmt-blue focus:outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveOption(idx)}
-                    disabled={currentConfig.options.length <= 2}
-                    className="text-sm text-red-500 disabled:text-red-200"
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
+              {currentConfig.type === 'dates' && currentConfig.dateRanges ? (
+                // Date picker UI for dates poll
+                currentConfig.dateRanges.map((range, idx) => (
+                  <div key={idx} className="flex items-center gap-2 p-3 bg-gray-50 rounded-xl">
+                    <div className="flex-1 flex items-center gap-2">
+                      <div className="flex flex-col">
+                        <span className="text-xs text-gray-500 mb-1">Check-in</span>
+                        <input
+                          type="date"
+                          value={range.startDate}
+                          min={minDate}
+                          onChange={(e) => handleDateRangeChange(idx, 'startDate', e.target.value)}
+                          className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-mmt-blue focus:outline-none"
+                        />
+                      </div>
+                      <span className="text-gray-400 mt-5">→</span>
+                      <div className="flex flex-col">
+                        <span className="text-xs text-gray-500 mb-1">Check-out</span>
+                        <input
+                          type="date"
+                          value={range.endDate}
+                          min={range.startDate || minDate}
+                          onChange={(e) => handleDateRangeChange(idx, 'endDate', e.target.value)}
+                          className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-mmt-blue focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                    <div className="text-sm text-gray-600 min-w-[120px] text-center">
+                      {range.startDate && range.endDate ? formatDateRangeDisplay(range.startDate, range.endDate) : 'Select dates'}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveOption(idx)}
+                      disabled={currentConfig.dateRanges!.length <= 2}
+                      className="text-sm text-red-500 disabled:text-red-200"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))
+              ) : (
+                // Text input UI for other poll types
+                currentConfig.options.map((option, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={option}
+                      onChange={(e) => handleOptionChange(idx, e.target.value)}
+                      placeholder={`Option ${idx + 1}`}
+                      className="flex-1 rounded-xl border border-gray-200 px-4 py-2 focus:border-mmt-blue focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveOption(idx)}
+                      disabled={currentConfig.options.length <= 2}
+                      className="text-sm text-red-500 disabled:text-red-200"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))
+              )}
             </div>
             <button
               type="button"
@@ -1802,7 +1963,7 @@ function PollWizardModal({
               disabled={currentConfig.options.length >= 6}
               className="text-sm text-mmt-blue"
             >
-              + Add option
+              + Add {currentConfig.type === 'dates' ? 'date range' : 'option'}
             </button>
           </div>
 

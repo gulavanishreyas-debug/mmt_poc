@@ -95,13 +95,38 @@ const parseDateRangeOption = (text?: string) => {
     return { checkIn: '', checkOut: '', label: '' };
   }
 
-  const segments = text.split('-').map((segment) => segment.trim()).filter(Boolean);
+  // FORMAT 1: Check for bracket format "Display [YYYY-MM-DD:YYYY-MM-DD]"
+  const bracketMatch = text.match(/\[(\d{4}-\d{2}-\d{2}):(\d{4}-\d{2}-\d{2})\]/);
+  if (bracketMatch) {
+    const checkIn = bracketMatch[1];
+    const checkOut = bracketMatch[2];
+    // Extract display text (everything before the bracket)
+    const label = text.replace(/\s*\[.*\]$/, '').trim();
+    return { checkIn, checkOut, label };
+  }
+
+  // FORMAT 2 (legacy): Check for ISO format with pipe separators (YYYY-MM-DD|YYYY-MM-DD|Display)
+  if (text.includes('|')) {
+    const parts = text.split('|');
+    if (parts.length >= 2) {
+      const checkIn = parts[0].trim();
+      const checkOut = parts[1].trim();
+      const label = parts[2]?.trim() || `${checkIn} to ${checkOut}`;
+      // Validate ISO date format
+      if (/^\d{4}-\d{2}-\d{2}$/.test(checkIn) && /^\d{4}-\d{2}-\d{2}$/.test(checkOut)) {
+        return { checkIn, checkOut, label };
+      }
+    }
+  }
+
+  // FORMAT 3 (legacy): Split by en-dash (–) or regular dash with spaces around it
+  const segments = text.split(/\s*–\s*|\s+-\s+/).map((segment) => segment.trim()).filter(Boolean);
   if (!segments.length) {
     return { checkIn: '', checkOut: '', label: '' };
   }
 
   const start = parseDateSegment(segments[0]);
-  const end = segments[1] ? parseDateSegment(segments[1], start.month) : start;
+  const end = segments[1] ? parseDateSegment(segments[1], start.month, start.year) : start;
 
   const toInput = (date: Date | null) => (date ? date.toISOString().split('T')[0] : '');
 
@@ -112,28 +137,69 @@ const parseDateRangeOption = (text?: string) => {
   };
 };
 
-const parseDateSegment = (segment: string, fallbackMonth?: string) => {
-  const tokens = segment.split(' ').filter(Boolean);
-  let month = fallbackMonth;
-  let dayToken = tokens[tokens.length - 1] || '';
-  if (tokens.length > 1) {
-    month = tokens.slice(0, tokens.length - 1).join(' ');
+const parseDateSegment = (segment: string, fallbackMonth?: string, fallbackYear?: number) => {
+  // Handle formats like "01 Jan 2026" (en-IN locale) or "26-Dec-2025" or "Dec 26"
+  let day: number | null = null;
+  let month: string | undefined = fallbackMonth;
+  let year = fallbackYear || new Date().getFullYear();
+
+  // Format 1: "DD Mon YYYY" (e.g., "01 Jan 2026") - en-IN locale with spaces
+  const ddMonYYYYSpaceMatch = segment.match(/(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})/);
+  if (ddMonYYYYSpaceMatch) {
+    day = parseInt(ddMonYYYYSpaceMatch[1], 10);
+    month = ddMonYYYYSpaceMatch[2];
+    year = parseInt(ddMonYYYYSpaceMatch[3], 10);
+  } 
+  // Format 2: "DD-Mon-YYYY" (e.g., "26-Dec-2025") - with hyphens
+  else {
+    const ddMonYYYYHyphenMatch = segment.match(/(\d{1,2})-([A-Za-z]{3})-(\d{4})/);
+    if (ddMonYYYYHyphenMatch) {
+      day = parseInt(ddMonYYYYHyphenMatch[1], 10);
+      month = ddMonYYYYHyphenMatch[2];
+      year = parseInt(ddMonYYYYHyphenMatch[3], 10);
+    } 
+    // Format 3: Fallback - parse space-separated tokens (e.g., "Dec 26" or "26 Dec")
+    else {
+      const tokens = segment.split(/[\s,\-]+/).filter(Boolean);
+      for (const token of tokens) {
+        if (token.match(/^[A-Za-z]{3,}$/)) {
+          month = token;
+        } else {
+          const num = parseInt(token, 10);
+          if (!Number.isNaN(num)) {
+            if (num >= 1 && num <= 31) {
+              day = num;
+            } else if (num > 1900 && num < 2100) {
+              year = num;
+            }
+          }
+        }
+      }
+    }
   }
-  const day = parseInt(dayToken.replace(/[^0-9]/g, ''), 10);
+
   const resolvedMonth = month || new Date().toLocaleString('en-US', { month: 'short' });
-  if (!day || !resolvedMonth) {
-    return { date: null, month: resolvedMonth };
+  if (!day) {
+    return { date: null, month: resolvedMonth, year };
   }
-  const date = new Date(`${resolvedMonth} ${day}, ${new Date().getFullYear()}`);
+
+  const date = new Date(`${resolvedMonth} ${day}, ${year}`);
   if (Number.isNaN(date.getTime())) {
-    return { date: null, month: resolvedMonth };
+    return { date: null, month: resolvedMonth, year };
   }
-  return { date, month: resolvedMonth };
+  return { date, month: resolvedMonth, year };
+};
+
+// Strip bracket portion from date options for clean display
+// e.g., "Dec 5 - 9, 2025 [2025-12-05:2025-12-09]" -> "Dec 5 - 9, 2025"
+const getDisplayText = (text: string): string => {
+  if (!text) return text;
+  return text.replace(/\s*\[[^\]]*\]\s*$/, '').trim();
 };
 
 const buildBannerMessage = (dateText?: string, budgetText?: string, amenityLabels?: string[]) => {
   const segments: string[] = [];
-  if (dateText) segments.push(dateText);
+  if (dateText) segments.push(getDisplayText(dateText));
   if (budgetText) segments.push(budgetText);
   if (amenityLabels?.length) segments.push(amenityLabels.join(' + '));
   if (!segments.length) return '';
