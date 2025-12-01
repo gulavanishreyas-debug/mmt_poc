@@ -57,6 +57,18 @@ const formatAmenityList = (keys: string[]) => keys.map(formatAmenityLabel).filte
 
 const formatCurrency = (value: number) => `₹${value.toLocaleString('en-IN')}`;
 
+// Generate a stable rating count based on hotel ID to avoid flickering on re-renders
+const getStableRatingCount = (hotelId: string): number => {
+  let hash = 0;
+  for (let i = 0; i < hotelId.length; i++) {
+    const char = hotelId.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  // Return a value between 500 and 1500
+  return 500 + Math.abs(hash % 1000);
+};
+
 const parseBudgetRange = (text?: string) => {
   if (!text) {
     return { min: 0, max: DEFAULT_MAX_PRICE, label: 'Any budget' };
@@ -1575,7 +1587,7 @@ export default function HotelSelection({ destination, onShareShortlist, prefillH
                             <Star className="w-4 h-4 fill-white" />
                             <span className="font-bold">{hotel.rating}</span>
                           </div>
-                          <div className="text-xs text-gray-600 mb-4">({Math.floor(Math.random() * 1000) + 500} Ratings)</div>
+                          <div className="text-xs text-gray-600 mb-4">({getStableRatingCount(hotel.id)} Ratings)</div>
                           <div className="text-2xl font-bold text-[#0071c2] mb-1">₹{hotel.price.toLocaleString()}</div>
                           <div className="text-xs text-gray-600">
                             + ₹{Math.floor(hotel.price * 0.12).toLocaleString()} Taxes & Fees
