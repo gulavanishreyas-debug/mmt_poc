@@ -91,7 +91,7 @@ export function generateShareLink(tripId: string): string {
 1. Go to http://localhost:3000
 2. Click "Start Group Trip"
 3. Fill in:
-   - Purpose: Casual Trip
+   - Purpose: Pilgrimage Trip
    - Name: "Beach Trip"
    - Destination: "Goa"
    - Members: 5

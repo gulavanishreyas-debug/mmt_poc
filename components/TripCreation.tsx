@@ -68,7 +68,7 @@ export default function TripCreation({ onClose }: TripCreationProps = {}) {
     {
       id: 'casual' as TripPurpose,
       icon: '🏖️',
-      title: 'Casual Trip',
+      title: 'Pilgrimage Trip',
       description: 'Just friends having fun',
       color: 'from-blue-400 to-cyan-400',
     },

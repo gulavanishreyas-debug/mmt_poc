@@ -73,7 +73,7 @@ After debug page works, test the main flow:
 2. Open DevTools Console
 3. Click "Start Group Trip"
 4. Fill in form:
-   - Purpose: Casual Trip
+   - Purpose: Pilgrimage Trip
    - Name: "Test Trip"
    - Destination: "Goa"
    - Members: 5

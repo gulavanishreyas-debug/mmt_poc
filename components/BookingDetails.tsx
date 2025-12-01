@@ -135,7 +135,7 @@ export default function BookingDetails() {
 
             {/* Trip Type Badge */}
             <div className="inline-block bg-purple-100 text-purple-700 px-4 py-2 rounded-full font-semibold mb-6">
-              {booking.tripType === 'wedding' ? '💒 Wedding' : booking.tripType === 'concert' ? '🎵 Concert' : '✈️ Casual Trip'}
+              {booking.tripType === 'wedding' ? '💒 Wedding' : booking.tripType === 'concert' ? '🎵 Concert' : '✈️ Pilgrimage Trip'}
             </div>
 
             {/* Stay Details */}
