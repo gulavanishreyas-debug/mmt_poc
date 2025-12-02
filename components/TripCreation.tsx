@@ -67,9 +67,9 @@ export default function TripCreation({ onClose }: TripCreationProps = {}) {
     },
     {
       id: 'casual' as TripPurpose,
-      icon: '🏖️',
+      icon: '🧘‍♂️',
       title: 'Pilgrimage Trip',
-      description: 'Just friends having fun',
+      description: 'Faith, culture, and timeless beauty',
       color: 'from-blue-400 to-cyan-400',
     },
   ];
